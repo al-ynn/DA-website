@@ -378,7 +378,7 @@ function savePreset() {
 
                         <div
                             v-else
-                            class="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center"
+                            class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-6 text-center"
                         >
                             <p class="text-sm text-zinc-500">
                                 No presets have been created yet.

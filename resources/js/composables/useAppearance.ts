@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { Appearance, ResolvedAppearance } from '@/types';
 
 export type { Appearance, ResolvedAppearance };
@@ -56,6 +56,9 @@ const getStoredAppearance = () => {
     return localStorage.getItem('appearance') as Appearance | null;
 };
 
+const appearance = ref<Appearance>('system');
+const systemIsDark = ref(false);
+
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
         return false;
@@ -64,7 +67,8 @@ const prefersDark = (): boolean => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-const handleSystemThemeChange = () => {
+const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+    systemIsDark.value = event.matches;
     const currentAppearance = getStoredAppearance();
 
     updateTheme(currentAppearance || 'system');
@@ -76,29 +80,18 @@ export function initializeTheme(): void {
     }
 
     // Initialize theme from saved preference or default to system...
-    const savedAppearance = getStoredAppearance();
-    updateTheme(savedAppearance || 'system');
+    appearance.value = getStoredAppearance() || 'system';
+    systemIsDark.value = prefersDark();
+    updateTheme(appearance.value);
 
     // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
-const appearance = ref<Appearance>('system');
-
 export function useAppearance(): UseAppearanceReturn {
-    onMounted(() => {
-        const savedAppearance = localStorage.getItem(
-            'appearance',
-        ) as Appearance | null;
-
-        if (savedAppearance) {
-            appearance.value = savedAppearance;
-        }
-    });
-
     const resolvedAppearance = computed<ResolvedAppearance>(() => {
         if (appearance.value === 'system') {
-            return prefersDark() ? 'dark' : 'light';
+            return systemIsDark.value ? 'dark' : 'light';
         }
 
         return appearance.value;

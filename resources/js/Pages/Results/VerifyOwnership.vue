@@ -1,7 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
-import PublicHeader from '@/components/PublicHeader.vue'
+import PublicHeader from '@/Components/PublicHeader.vue'
 
 const props = defineProps({
   code: String,

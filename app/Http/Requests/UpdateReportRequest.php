@@ -1,0 +1,156 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateReportRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+    public function rules(): array
+    {
+        $isDraft = $this->boolean('is_draft');
+
+        return [
+            'user_id' => ['nullable','exists:users,id'],
+            'request_code' => [$isDraft ? 'nullable' : 'required','string','max:255', Rule::unique('reports', 'request_code')->ignore($this->route('report'))],
+            'date' => [$isDraft ? 'nullable' : 'required','date'],
+            'status' => [$isDraft ? 'nullable' : 'required', Rule::in(['draft','Test Request submitted','Under Analyzation','Analyzed','Under Recommendation','Recommended','Reviewed','Certified','Noted','Ready'])],
+            'surname' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'full_name' => ['nullable', 'string', 'max:255'],
+            'rsbsa_no' => ['nullable', 'string', 'max:255'],
+            'company_name' => ['nullable', 'string', 'max:255'],
+            'classification' => ['nullable'],
+            'student_type' => ['nullable', 'string', Rule::in(['Undergraduate', 'Post Graduate'])],
+            'sex' => ['nullable', 'string', 'max:255'],
+            'age' => ['nullable', 'integer', 'min:0'],
+            'address' => ['nullable', 'string'],
+            'contact_number' => ['nullable', 'string', 'max:255'],
+            'email_address' => ['nullable', 'email', 'max:255'],
+            'sampling_date' => ['nullable', 'date'],
+            'sampling_time' => ['nullable', 'string', 'max:255'],
+            'mode_of_release' => ['nullable', 'string', 'max:255'],
+            'retrieve_sample' => ['nullable'],
+            'agreed_release_date' => ['nullable', 'date'],
+            'number_of_samples' => ['nullable', 'integer', 'min:0'],
+            'date_received' => ['nullable', 'date'],
+            'received_by' => ['nullable', 'string', 'max:255'],
+            'payment_status' => ['nullable', 'string', 'max:255'],
+            'deposit' => ['nullable', 'numeric', 'min:0'],
+            'or_no' => ['nullable', 'string', 'max:255'],
+            'payment_date' => ['nullable', 'date'],
+            'balance' => ['nullable', 'numeric', 'min:0'],
+            'total_amount_due' => ['nullable', 'numeric', 'min:0'],
+            'total_amount' => ['nullable', 'numeric', 'min:0'],
+            'samples' => ['nullable','array'],
+            'samples.*.laboratory_code' => ['required_with:samples','string','max:255'],
+            'samples.*.sample_id' => ['required_with:samples','string','max:255'],
+            'samples.*.sample_description' => ['nullable','string'],
+            'samples.*.sample_type' => ['nullable','string','max:255'],
+            'samples.*.soil_condition' => ['nullable','string', Rule::in(['dry','wet'])],
+            'samples.*.soil_color' => ['nullable','string','max:255'],
+            'samples.*.soil_depth' => ['nullable','string','max:255'],
+            'samples.*.soil_others' => ['nullable','string','max:255'],
+            'samples.*.water_filtered' => ['nullable','string', Rule::in(['yes','no'])],
+            'samples.*.water_temperature' => ['nullable','string','max:255'],
+            'samples.*.water_others' => ['nullable','string','max:255'],
+            'samples.*.topography' => ['nullable','string','max:255'],
+            'samples.*.coordinates' => ['nullable','string','max:255'],
+            'samples.*.longitude' => ['nullable','string','max:255'],
+            'samples.*.latitude' => ['nullable','string','max:255'],
+            'samples.*.region' => ['nullable','string','max:255'],
+            'samples.*.province' => ['nullable','string','max:255'],
+            'samples.*.municipality' => ['nullable','string','max:255'],
+            'samples.*.barangay' => ['nullable','string','max:255'],
+            'samples.*.farm_area' => ['nullable','string','max:255'],
+            'samples.*.crops' => ['nullable','string','max:255'],
+            'samples.*.remarks' => ['nullable','string'],
+            'samples.*.analysis_requested' => ['nullable','string'],
+            'samples.*.analysis_requested_chemist' => ['nullable','string'],
+            'samples.*.analysis_requested_agriculturist' => ['nullable','string'],
+            'samples.*.subtotal' => ['nullable','numeric','min:0'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'required' => 'The :attribute field is required.',
+            'integer' => 'The :attribute field must be a number.',
+            'numeric' => 'The :attribute field must be a number.',
+            'date' => 'The :attribute field must be a valid date.',
+            'email' => 'The :attribute field must be a valid email address.',
+            'min' => 'The :attribute field must be at least :min.',
+            'max' => 'The :attribute field is too long.',
+            'in' => 'The selected :attribute is invalid.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'user_id' => 'user',
+            'request_code' => 'test request number',
+            'date' => 'date',
+            'status' => 'status',
+            'surname' => 'surname',
+            'first_name' => 'first name',
+            'middle_name' => 'middle name',
+            'full_name' => 'full name',
+            'rsbsa_no' => 'RSBSA number',
+            'company_name' => 'company name',
+            'classification' => 'client classification',
+            'student_type' => 'student type',
+            'sex' => 'sex',
+            'age' => 'age',
+            'address' => 'address',
+            'contact_number' => 'contact number',
+            'email_address' => 'email address',
+            'sampling_date' => 'date of sampling',
+            'sampling_time' => 'time of sampling',
+            'mode_of_release' => 'mode of release',
+            'retrieve_sample' => 'retrieve retained sample after analysis',
+            'agreed_release_date' => 'agreed date of release results',
+            'number_of_samples' => 'number of samples',
+            'date_received' => 'date received',
+            'received_by' => 'received by',
+            'payment_status' => 'payment status',
+            'deposit' => 'deposit',
+            'or_no' => 'O.R. number',
+            'payment_date' => 'payment date',
+            'balance' => 'balance',
+            'total_amount_due' => 'total amount due',
+            'total_amount' => 'total amount',
+            'samples' => 'sample entries',
+            'samples.*.laboratory_code' => 'laboratory code',
+            'samples.*.sample_id' => 'sample ID',
+            'samples.*.sample_description' => 'sample description',
+            'samples.*.sample_type' => 'sample type',
+            'samples.*.soil_condition' => 'soil condition',
+            'samples.*.soil_color' => 'soil color',
+            'samples.*.soil_depth' => 'soil depth',
+            'samples.*.soil_others' => 'other soil description',
+            'samples.*.water_filtered' => 'filtered selection',
+            'samples.*.water_temperature' => 'water temperature',
+            'samples.*.water_others' => 'other water description',
+            'samples.*.topography' => 'topography',
+            'samples.*.coordinates' => 'coordinates',
+            'samples.*.longitude' => 'longitude',
+            'samples.*.latitude' => 'latitude',
+            'samples.*.region' => 'region',
+            'samples.*.province' => 'province',
+            'samples.*.municipality' => 'municipality',
+            'samples.*.barangay' => 'barangay',
+            'samples.*.farm_area' => 'farm area',
+            'samples.*.crops' => 'crops',
+            'samples.*.remarks' => 'remarks',
+            'samples.*.analysis_requested' => 'analysis requested',
+            'samples.*.analysis_requested_chemist' => 'analysis requested by chemist',
+            'samples.*.analysis_requested_agriculturist' => 'analysis requested by agriculturist',
+            'samples.*.subtotal' => 'subtotal',
+        ];
+    }
+}

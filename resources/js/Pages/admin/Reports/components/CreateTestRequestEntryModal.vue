@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import { Search, Plus, X, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 
 type Client = {
   id: string
@@ -23,14 +23,7 @@ defineEmits<{
 const searchQuery = ref('')
 const expandedClientId = ref<string | null>(null)
 
-const fallbackClients: Client[] = [
-  { id: '1', code: '13-04-0001-001', name: 'Juan Dela Cruz', type: 'Farmer' },
-  { id: '2', code: 'N/A', name: 'Maria Santos', type: 'Researcher' },
-  { id: '3', code: '13-04-0001-003', name: 'Pedro Reyes', type: 'Company' },
-  { id: '4', code: 'N/A', name: 'Ana Lopez', type: 'Student' },
-]
-
-const clientList = computed(() => (props.clients?.length ? props.clients : fallbackClients))
+const clientList = computed(() => props.clients ?? [])
 
 const filteredClients = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()

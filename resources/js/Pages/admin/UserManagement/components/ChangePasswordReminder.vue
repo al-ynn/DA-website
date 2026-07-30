@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
+import { ref, onMounted, computed } from 'vue'
 
 const page = usePage<{
     mustChangePassword: boolean

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { useTemplateRef } from 'vue';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import Heading from '@/Components/Heading.vue';
+import InputError from '@/Components/InputError.vue';
+import { Button } from '@/Components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -13,10 +14,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+} from '@/Components/ui/dialog';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 
 const passwordInput = useTemplateRef('passwordInput');
 </script>
@@ -29,9 +29,9 @@ const passwordInput = useTemplateRef('passwordInput');
             description="Delete your account and all of its resources"
         />
         <div
-            class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4"
+            class="space-y-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4"
         >
-            <div class="relative space-y-0.5 text-red-600">
+            <div class="relative space-y-0.5 text-destructive">
                 <p class="font-medium">Warning</p>
                 <p class="text-sm">
                     Please proceed with caution, this cannot be undone.
@@ -45,7 +45,7 @@ const passwordInput = useTemplateRef('passwordInput');
                 </DialogTrigger>
                 <DialogContent>
                     <Form
-                        v-bind="ProfileController.destroy.form()"
+                        :action="ProfileController.destroy()"
                         reset-on-success
                         @error="() => passwordInput?.$el?.focus()"
                         :options="{

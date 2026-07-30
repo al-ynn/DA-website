@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
-import { ref } from 'vue'
 import { ClipboardCheck, ShieldCheck, BadgeCheck } from 'lucide-vue-next'
+import { ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
 
 const confirmed = ref(false)
 const completedIndex = 1

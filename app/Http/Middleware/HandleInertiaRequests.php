@@ -39,6 +39,13 @@ class HandleInertiaRequests extends Middleware
             'mustChangePassword' => fn () =>
                 $request->user()
                     ? is_null($request->user()->password_changed_at)
+                        || $request->user()->has_temporary_password
+                        || (
+                            $request->user()->password_changed_at
+                            && $request->user()->password_changed_at->lt(
+                                now()->subDays((int) config('security.password_expiry_days', 90))
+                            )
+                        )
                     : false,
 
             'passwordReminderDismissed' => fn () =>

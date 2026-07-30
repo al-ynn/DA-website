@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import {
   BadgePlus,
   Pencil,
@@ -14,6 +11,9 @@ import {
   Tractor,
   Eye,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type UserCategory = 'ADMIN' | 'CHEMIST' | 'AGRICULTURIST'
 type AdditionalTaskType = 'CHEMIST' | 'AGRICULTURIST'
@@ -224,14 +224,14 @@ function taskClass(task: AdditionalTaskType) {
     <div class="relative p-3 sm:p-4 md:p-5 lg:p-6">
       <div class="flex flex-col gap-3 sm:gap-4">
         <!-- HEADER -->
-        <div class="sticky top-0 z-30 -mx-3 -mt-3 border-b border-zinc-200 bg-[#f3f4f6] px-3 pt-3 pb-3 sm:-mx-4 sm:-mt-4 sm:px-4 md:-mx-5 md:-mt-5 md:px-5 lg:-mx-6 lg:-mt-6 lg:px-6 lg:pt-5">
+        <div class="sticky top-0 z-30 -mx-3 -mt-3 border-b border-border bg-background px-3 pt-3 pb-3 sm:-mx-4 sm:-mt-4 sm:px-4 md:-mx-5 md:-mt-5 md:px-5 lg:-mx-6 lg:-mt-6 lg:px-6 lg:pt-5">
           <div class="flex flex-col gap-3">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h1 class="text-lg font-semibold text-zinc-900 sm:text-xl">
+                <h1 class="text-lg font-semibold text-foreground sm:text-xl">
                   Active Accounts
                 </h1>
-                <p class="text-xs text-zinc-500 sm:text-sm">
+                <p class="text-xs text-muted-foreground sm:text-sm">
                   Total Accounts: {{ totalAccounts }}
                 </p>
               </div>
@@ -254,21 +254,21 @@ function taskClass(task: AdditionalTaskType) {
               </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+            <div class="rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm">
               <div class="grid gap-3 md:grid-cols-3">
                 <div class="relative md:col-span-2">
-                  <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     v-model="search"
                     type="text"
                     placeholder="Search name or email"
-                    class="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-10 pr-3 text-xs text-zinc-900 outline-none ring-0 placeholder:text-zinc-400 focus:border-zinc-400 sm:text-sm"
+                    class="h-9 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-xs text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:border-ring sm:text-sm"
                   />
                 </div>
 
                 <select
                   v-model="selectedCategory"
-                  class="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-900 outline-none focus:border-zinc-400 sm:text-sm"
+                  class="h-9 rounded-lg border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-ring sm:text-sm"
                 >
                   <option value="ALL">All Roles (Main Task)</option>
                   <option value="ADMIN">Admin</option>

@@ -6,11 +6,11 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import UserInfo from '@/components/UserInfo.vue';
-import type { User } from '@/types';
+} from '@/Components/ui/dropdown-menu';
+import UserInfo from '@/Components/UserInfo.vue';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
+import { edit } from '@/routes/profile/index';
+import type { User } from '@/types';
 
 type Props = {
     user: User;

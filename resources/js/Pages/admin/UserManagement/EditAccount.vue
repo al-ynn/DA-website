@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import { ArrowLeft, Save, X, CircleCheckBig, TriangleAlert } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type UserCategory = 'ADMIN' | 'CHEMIST' | 'AGRICULTURIST'
-type AccountStatus = 'ACTIVE' | 'DISABLED'
 type AdditionalTaskType = 'CHEMIST' | 'AGRICULTURIST'
 type SexType = 'MALE' | 'FEMALE'
 

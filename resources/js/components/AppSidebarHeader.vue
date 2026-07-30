@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import Breadcrumbs from '@/components/Breadcrumbs.vue'
-import type { BreadcrumbItem } from '@/types'
-import { computed, inject, type Ref } from 'vue'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
+import { computed, inject, type Ref } from 'vue'
+import Breadcrumbs from '@/Components/Breadcrumbs.vue'
+import type { BreadcrumbItem } from '@/types'
 
 withDefaults(
   defineProps<{

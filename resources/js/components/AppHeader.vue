@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import AppLogo from '@/components/AppLogo.vue'
+import AppLogo from '@/Components/AppLogo.vue'
 </script>
 
 <template>

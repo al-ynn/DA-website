@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import {
   ClipboardCheck,
@@ -13,9 +13,9 @@ import {
   MessageSquareText,
 } from 'lucide-vue-next'
 
-import PublicHeader from '@/components/PublicHeader.vue'
+import PublicHeader from '@/Components/PublicHeader.vue'
 
-const props = defineProps({
+defineProps({
   code: String,
   found: Boolean,
 })

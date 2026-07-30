@@ -1,10 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
-import AppSidebarHeader from '@/layouts/app/AppSidebarHeader.vue'
+import AppSidebarHeader from '@/Layouts/app/AppSidebarHeader.vue'
 
 const page = usePage()
-const showingNavigationDropdown = ref(false)
 </script>
 
 <template>

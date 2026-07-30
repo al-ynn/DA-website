@@ -44,6 +44,8 @@ class PasswordController extends Controller
         $request->user()->update([
             'password' => Hash::make($validated['password']),
             'password_changed_at' => now(),
+            'password_expires_at' => now()->addDays((int) config('security.password_expiry_days', 90)),
+            'has_temporary_password' => false,
             'password_reminder_dismissed_at' => null,
         ]);
 

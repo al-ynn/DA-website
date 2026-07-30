@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -32,6 +33,8 @@ class User extends Authenticatable
         'additional_tasks',
         'is_disabled',
         'is_draft',
+        'has_temporary_password',
+        'password_expires_at',
     ];
     /**
      * The attributes that should be hidden for serialization.
@@ -52,7 +55,9 @@ class User extends Authenticatable
         'additional_tasks' => 'array',
         'is_disabled' => 'boolean',
         'is_draft' => 'boolean',
+        'has_temporary_password' => 'boolean',
         'password_changed_at' => 'datetime',
+        'password_expires_at' => 'datetime',
         'password_reminder_dismissed_at' => 'datetime',
     ];
 
@@ -93,5 +98,20 @@ class User extends Authenticatable
             'user_id',
             'laboratory_task_id'
         )->withTimestamps();
+    }
+
+    public function loginHistories(): HasMany
+    {
+        return $this->hasMany(LoginHistory::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
+
+    public function createdReports(): HasMany
+    {
+        return $this->reports();
     }
 }

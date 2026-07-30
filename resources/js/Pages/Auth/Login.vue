@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from "@inertiajs/vue3";
-import PublicHeader from '@/components/PublicHeader.vue'
+import PublicHeader from '@/Components/PublicHeader.vue'
 
 const form = useForm({
     email: "",

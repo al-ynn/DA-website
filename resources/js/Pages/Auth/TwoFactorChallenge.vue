@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import InputError from '@/Components/InputError.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
 import {
     InputOTP,
     InputOTPGroup,
     InputOTPSlot,
-} from '@/components/ui/input-otp';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+} from '@/Components/ui/input-otp';
+import AuthLayout from '@/Layouts/AuthLayout.vue';
+import { store } from '@/routes/two-factor/login/index';
 import type { TwoFactorConfigContent } from '@/types';
-import { store } from '@/routes/two-factor/login';
 
 const authConfigContent = computed<TwoFactorConfigContent>(() => {
     if (showRecoveryInput.value) {
@@ -52,7 +52,7 @@ const code = ref<string>('');
         <div class="space-y-6">
             <template v-if="!showRecoveryInput">
                 <Form
-                    v-bind="store.form()"
+                    :action="store()"
                     class="space-y-4"
                     reset-on-error
                     @error="code = ''"
@@ -99,7 +99,7 @@ const code = ref<string>('');
 
             <template v-else>
                 <Form
-                    v-bind="store.form()"
+                    :action="store()"
                     class="space-y-4"
                     reset-on-error
                     #default="{ errors, processing, clearErrors }"

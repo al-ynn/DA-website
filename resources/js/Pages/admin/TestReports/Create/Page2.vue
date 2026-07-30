@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
-import type { BreadcrumbItem } from '@/types'
-import { computed, ref } from 'vue'
 import {
   CalendarDays,
   UserRoundCheck,
@@ -11,10 +8,12 @@ import {
   Plus,
   Copy,
   CreditCard,
-  ChevronDown,
   TriangleAlert,
   CircleCheckBig,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type SampleDescription = 'soil' | 'water' | 'fertilizer' | ''
 type SampleType = string
@@ -42,9 +41,10 @@ type ProvinceLocationData = {
 
 type LocationData = Record<string, Record<string, ProvinceLocationData>>
 
-type AnalysisRequestedOption = {
-  category: 'chemist' | 'agriculturist'
+type AnalysisGroup = {
   label: string
+  category: 'chemist' | 'agriculturist'
+  tasks: string[]
 }
 
 type TestRequestForm = {
@@ -71,6 +71,7 @@ type TestRequestForm = {
 const props = defineProps<{
   client_id?: string | number
   from_existing?: boolean
+  draftReport?: Record<string, any> | null
 }>()
 
 const page = usePage()
@@ -171,23 +172,47 @@ const LOCATION_DATA: LocationData = {
 
 const cropOptions = ['Corn', 'Rice', 'Okra', 'String Beans', 'Squash']
 
-const analysisRequestedOptions: AnalysisRequestedOption[] = [
-  { category: 'chemist', label: 'pH' },
-  { category: 'chemist', label: 'EC Analysis' },
-  { category: 'chemist', label: 'Organic Matter Analysis' },
-  { category: 'chemist', label: 'Available Phosphorus' },
-  { category: 'chemist', label: 'Potassium' },
-  { category: 'chemist', label: 'Calcium' },
-  { category: 'chemist', label: 'Magnesium' },
-  { category: 'chemist', label: 'Sodium' },
-  { category: 'chemist', label: 'Zinc' },
-  { category: 'chemist', label: 'Copper' },
-  { category: 'chemist', label: 'Iron' },
-  { category: 'chemist', label: 'Manganese' },
-  { category: 'agriculturist', label: 'Soil Moisture' },
-  { category: 'agriculturist', label: 'Particle Size Analysis' },
-  { category: 'agriculturist', label: 'Soil Texture' },
-  { category: 'agriculturist', label: 'Fertilizer Recommendation' },
+const analysisGroups: AnalysisGroup[] = [
+  {
+    category: 'chemist',
+    label: 'pH and EC Analysis',
+    tasks: ['pH', 'EC Analysis'],
+  },
+  {
+    category: 'chemist',
+    label: 'Organic Matter Analysis',
+    tasks: ['Organic Matter Analysis'],
+  },
+  {
+    category: 'chemist',
+    label: 'Available Phosphorus',
+    tasks: ['Available Phosphorus'],
+  },
+  {
+    category: 'chemist',
+    label: 'Exchangeable Bases',
+    tasks: ['Potassium', 'Calcium', 'Magnesium', 'Sodium'],
+  },
+  {
+    category: 'chemist',
+    label: 'Micronutrients',
+    tasks: ['Zinc', 'Copper', 'Iron', 'Manganese'],
+  },
+  {
+    category: 'agriculturist',
+    label: 'Soil Moisture',
+    tasks: ['Soil Moisture'],
+  },
+  {
+    category: 'agriculturist',
+    label: 'Particle Size Analysis and Soil Texture',
+    tasks: ['Particle Size Analysis', 'Soil Texture'],
+  },
+  {
+    category: 'agriculturist',
+    label: 'Fertilizer Recommendation',
+    tasks: ['Fertilizer Recommendation'],
+  },
 ]
 
 const sampleInfo = ref({
@@ -204,12 +229,9 @@ const sampleInfo = ref({
 })
 
 const paymentStatus = ref<'pending' | 'paid'>('pending')
-const openAnalysisDropdownIndex = ref<number | null>(null)
 const showMismatchModal = ref(false)
 const showConfirmProceed = ref(false)
-
-const DRAFT_KEY = 'test-request-draft'
-const savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
+const validationError = ref('')
 
 function createEmptyTestRequestForm(id: string): TestRequestForm {
   return {
@@ -236,10 +258,55 @@ const requestBlocks = ref<TestRequestForm[]>([
   createEmptyTestRequestForm('1'),
 ])
 
-if (savedDraft.page2) {
-  sampleInfo.value = savedDraft.page2.sampleInfo ?? sampleInfo.value
-  paymentStatus.value = savedDraft.page2.paymentStatus ?? paymentStatus.value
-  requestBlocks.value = savedDraft.page2.requestBlocks ?? requestBlocks.value
+if (props.draftReport) {
+  sampleInfo.value = {
+    number_of_samples: String(props.draftReport.number_of_samples ?? sampleInfo.value.number_of_samples),
+    date_received: String(props.draftReport.date_received ?? sampleInfo.value.date_received).slice(0, 10),
+    received_by: props.draftReport.received_by ?? sampleInfo.value.received_by,
+    mode_of_release: props.draftReport.mode_of_release ?? sampleInfo.value.mode_of_release,
+    retrieve_sample: (props.draftReport.retrieve_sample ? 'yes' : 'no') as RetrieveSample,
+    agreed_release_date: String(props.draftReport.agreed_release_date ?? '').slice(0, 10),
+    deposit: String(props.draftReport.deposit ?? ''),
+    or_no: props.draftReport.or_no ?? '',
+    payment_date: String(props.draftReport.payment_date ?? '').slice(0, 10),
+    balance: String(props.draftReport.balance ?? ''),
+  }
+  paymentStatus.value = (props.draftReport.payment_status ?? 'pending') as 'pending' | 'paid'
+  requestBlocks.value = Array.isArray(props.draftReport.samples) && props.draftReport.samples.length
+    ? props.draftReport.samples.map((sample: any, index: number) => ({
+        id: String(index + 1),
+        sampleDescription: sample.sample_description ?? '',
+        sampleType: sample.sample_type ?? '',
+        sampleId: sample.sample_id ?? '',
+        soilDescription: sample.sample_description === 'soil'
+          ? {
+              condition: sample.soil_condition ?? '',
+              color: sample.soil_color ?? '',
+              depth: sample.soil_depth ?? '',
+              others: sample.soil_others ?? '',
+            }
+          : undefined,
+        waterDescription: sample.sample_description === 'water'
+          ? {
+              filtered: sample.water_filtered ?? '',
+              temperature: sample.water_temperature ?? '',
+              others: sample.water_others ?? '',
+            }
+          : undefined,
+        topography: sample.topography ?? '',
+        longitude: sample.longitude ?? '',
+        latitude: sample.latitude ?? '',
+        region: sample.region ?? '',
+        province: sample.province ?? '',
+        municipality: sample.municipality ?? '',
+        barangay: sample.barangay ?? '',
+        farmArea: sample.farm_area ?? '',
+        crops: sample.crops ?? '',
+        remarks: sample.remarks ?? '',
+        analysisRequested: String(sample.analysis_requested ?? '').split(',').map((item: string) => item.trim()).filter(Boolean),
+        subtotal: Number(sample.subtotal ?? 0),
+      }))
+    : requestBlocks.value
 }
 
 const declaredSampleCount = computed(() => Number(sampleInfo.value.number_of_samples || 0))
@@ -253,37 +320,147 @@ const subtotalSummary = computed(() =>
 )
 
 function goBack() {
+  const draftQuery = props.draftReport?.id ? `&draft_id=${props.draftReport.id}` : ''
+
   if (props.client_id) {
-    router.visit(`/test-reports/create/page-1?client_id=${props.client_id}`)
+    router.visit(`/test-reports/create/page-1?client_id=${props.client_id}${draftQuery}`)
     return
   }
 
-  router.visit('/test-reports/create/page-1')
+  router.visit(`/test-reports/create/page-1${draftQuery ? `?${draftQuery.slice(1)}` : ''}`)
+}
+
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
 }
 
 function savePage2() {
-  const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
-
-  localStorage.setItem(DRAFT_KEY, JSON.stringify({
-    ...draft,
-    page2: {
-      sampleInfo: sampleInfo.value,
-      paymentStatus: paymentStatus.value,
-      requestBlocks: requestBlocks.value,
-    },
-  }))
+  return {
+    draft_id: props.draftReport?.id ?? null,
+    number_of_samples: sampleInfo.value.number_of_samples,
+    date_received: sampleInfo.value.date_received,
+    received_by: sampleInfo.value.received_by,
+    mode_of_release: sampleInfo.value.mode_of_release,
+    retrieve_sample: sampleInfo.value.retrieve_sample,
+    agreed_release_date: sampleInfo.value.agreed_release_date,
+    deposit: sampleInfo.value.deposit,
+    or_no: sampleInfo.value.or_no,
+    payment_date: sampleInfo.value.payment_date,
+    balance: sampleInfo.value.balance,
+  }
 }
 
-function proceedToNextPage() {
-  savePage2()
-  router.visit('/test-reports/create/page-3')
-}
+async function proceedToNextPage() {
+  let response: Response
 
-function goNext() {
-  handleNextWithValidation()
+  try {
+    response = await fetch('/reports/draft', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': getCsrfToken(),
+      },
+      body: JSON.stringify({
+        ...props.draftReport,
+        ...savePage2(),
+        is_draft: true,
+        status: 'draft',
+        samples: requestBlocks.value.map((block) => ({
+          laboratory_code: block.id,
+          sample_id: block.sampleId,
+          sample_description: block.sampleDescription,
+          sample_type: block.sampleType,
+          soil_condition: block.soilDescription?.condition || null,
+          soil_color: block.soilDescription?.color || null,
+          soil_depth: block.soilDescription?.depth || null,
+          soil_others: block.soilDescription?.others || null,
+          water_filtered: block.waterDescription?.filtered || null,
+          water_temperature: block.waterDescription?.temperature || null,
+          water_others: block.waterDescription?.others || null,
+          topography: block.topography,
+          longitude: block.longitude,
+          latitude: block.latitude,
+          region: block.region,
+          province: block.province,
+          municipality: block.municipality,
+          barangay: block.barangay,
+          farm_area: block.farmArea,
+          crops: block.crops,
+          remarks: block.remarks,
+          analysis_requested: block.analysisRequested.join(', '),
+          subtotal: Number(block.subtotal || 0),
+        })),
+      }),
+    })
+  } catch {
+    validationError.value = 'Unable to save your information. Please check your connection and try again.'
+    return
+  }
+
+  if (!response.ok) {
+    let message = 'Unable to save your information. Please try again.'
+
+    try {
+      const data = await response.json() as { message?: string; errors?: Record<string, string[]> }
+      const firstError = data.errors ? Object.values(data.errors).flat().find(Boolean) : ''
+      message = firstError || data.message || message
+    } catch {
+      // Keep the user-friendly fallback.
+    }
+
+    validationError.value = message
+    return
+  }
+
+  const data = await response.json() as { report?: { id?: number } }
+  const draftId = data.report?.id ?? props.draftReport?.id
+  router.visit(`/test-reports/create/page-3${draftId ? `?draft_id=${draftId}` : ''}`)
 }
 
 function handleNextWithValidation() {
+  const requiredSampleInfoField = [
+    [!sampleInfo.value.mode_of_release, 'Mode of Release'],
+    [!sampleInfo.value.retrieve_sample, 'Retrieve retained sample after analysis'],
+    [!sampleInfo.value.agreed_release_date, 'Agreed Date of Release Results'],
+    [!sampleInfo.value.number_of_samples, 'No. of Samples Submitted'],
+    [!sampleInfo.value.received_by, 'Received By'],
+  ].find(([missing]) => missing)?.[1]
+
+  if (requiredSampleInfoField) {
+    validationError.value = `${requiredSampleInfoField} is required.`
+    return
+  }
+
+  const requiredBlockError = requestBlocks.value.flatMap((block, index) => ([
+    [!block.sampleDescription, `Sample ${index + 1}: Sample Description`],
+    [!block.sampleType, `Sample ${index + 1}: Sample Type`],
+    [!block.sampleId, `Sample ${index + 1}: Sample ID`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.condition, `Sample ${index + 1}: Condition`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.color, `Sample ${index + 1}: Color`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.depth, `Sample ${index + 1}: Soil Depth`],
+    [block.sampleDescription === 'water' && !block.waterDescription?.filtered, `Sample ${index + 1}: Filtered`],
+    [block.sampleDescription === 'water' && !block.waterDescription?.temperature, `Sample ${index + 1}: Temperature`],
+    [!block.topography, `Sample ${index + 1}: Topography`],
+    [!block.longitude, `Sample ${index + 1}: Longitude`],
+    [!block.latitude, `Sample ${index + 1}: Latitude`],
+    [!block.region, `Sample ${index + 1}: Region`],
+    [!block.province, `Sample ${index + 1}: Province`],
+    [!block.municipality, `Sample ${index + 1}: Municipality`],
+    [!block.barangay, `Sample ${index + 1}: Barangay`],
+    [!block.farmArea, `Sample ${index + 1}: Farm Area`],
+    [!block.crops, `Sample ${index + 1}: Crops`],
+  ].find(([missing]) => missing)?.[1])).find(Boolean)
+
+  if (requiredBlockError) {
+    validationError.value = `${requiredBlockError} is required.`
+    return
+  }
+
+  validationError.value = ''
+
   if (declaredSampleCount.value !== currentFormCount.value) {
     showMismatchModal.value = true
     return
@@ -377,56 +554,18 @@ function handleSampleDescriptionChange(index: number, value: SampleDescription) 
   requestBlocks.value = updated
 }
 
-function toggleAnalysisDropdown(index: number) {
-  openAnalysisDropdownIndex.value = openAnalysisDropdownIndex.value === index ? null : index
+function hasAllTasks(block: TestRequestForm, tasks: string[]) {
+  return tasks.every((task) => block.analysisRequested.includes(task))
 }
 
-function closeAnalysisDropdown() {
-  openAnalysisDropdownIndex.value = null
-}
-
-function toggleAnalysisRequested(index: number, analysis: string) {
+function toggleAnalysisGroup(index: number, group: AnalysisGroup) {
   const current = requestBlocks.value[index].analysisRequested
-  const updated = current.includes(analysis)
-    ? current.filter((item) => item !== analysis)
-    : [...current, analysis]
+  const allSelected = group.tasks.every((task) => current.includes(task))
+  const next = allSelected
+    ? current.filter((item) => !group.tasks.includes(item))
+    : Array.from(new Set([...current, ...group.tasks]))
 
-  updateTestRequest(index, 'analysisRequested', updated)
-}
-
-function getAnalysisRequested(block: any): string[] {
-  const value =
-    block.analysisRequested ??
-    block.analysis_requested ??
-    block.analysisRequestedOptions ??
-    block.analysis_requested_options ??
-    block.analysis ??
-    block.tests ??
-    block.test_requested ??
-    block.testRequested ??
-    []
-
-  if (Array.isArray(value)) {
-    return value.map((item) => {
-      if (typeof item === 'string') return item
-      return item.label ?? item.name ?? item.value ?? ''
-    }).filter(Boolean)
-  }
-
-  if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-  }
-
-  return []
-}
-
-function isSelected(block: any, label: string) {
-  return getAnalysisRequested(block).some(
-    (item) => item.toLowerCase() === label.toLowerCase(),
-  )
+  updateTestRequest(index, 'analysisRequested', next)
 }
 
 function getProvinces(region: string): string[] {
@@ -989,100 +1128,53 @@ function getBarangays(region: string, province: string, municipality: string): s
                         Analysis Requested
                       </h3>
 
-                      <div class="space-y-6">
-                        <div class="rounded-xl border border-zinc-200 p-4">
-                          <div class="mb-2 block text-sm font-medium text-zinc-700">
-                            Chemist
-                          </div>
-
-                          <div class="grid gap-4 lg:grid-cols-2">
-                            <div class="space-y-3">
-                              <label
-                                v-for="opt in analysisRequestedOptions.filter(o =>
-                                  o.category === 'chemist' &&
-                                  ['pH', 'EC Analysis', 'Organic Matter Analysis', 'Available Phosphorus'].includes(o.label)
-                                )"
-                                :key="opt.label"
-                                class="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700"
-                              >
-                                <input
-                                  type="checkbox"
-                                  class="h-4 w-4 rounded border-zinc-300 text-[#0E3D1A] focus:ring-0"
-                                  :checked="block.analysisRequested.includes(opt.label)"
-                                  @change="toggleAnalysisRequested(index, opt.label)"
-                                />
-                                {{ opt.label }}
-                              </label>
-                            </div>
-
-                            <div class="space-y-4">
-                              <div class="rounded-xl border border-zinc-200 p-4">
-                                <div class="border-b border-zinc-200 pb-2 text-sm font-medium text-zinc-700">
-                                  Exchangeable Bases
-                                </div>
-
-                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                  <label
-                                    v-for="opt in ['Potassium', 'Calcium', 'Magnesium', 'Sodium']"
-                                    :key="opt"
-                                    class="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      class="h-4 w-4 rounded border-zinc-300 text-[#0E3D1A] focus:ring-0"
-                                      :checked="block.analysisRequested.includes(opt)"
-                                      @change="toggleAnalysisRequested(index, opt)"
-                                    />
-                                    {{ opt }}
-                                  </label>
-                                </div>
-                              </div>
-
-                              <div class="rounded-xl border border-zinc-200 p-4">
-                                <div class="border-b border-zinc-200 pb-2 text-sm font-medium text-zinc-700">
-                                  Micronutrients
-                                </div>
-
-                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                  <label
-                                    v-for="opt in ['Zinc', 'Copper', 'Iron', 'Manganese']"
-                                    :key="opt"
-                                    class="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      class="h-4 w-4 rounded border-zinc-300 text-[#0E3D1A] focus:ring-0"
-                                      :checked="block.analysisRequested.includes(opt)"
-                                      @change="toggleAnalysisRequested(index, opt)"
-                                    />
-                                    {{ opt }}
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-200 p-4">
-                          <div class="mb-2 block text-sm font-medium text-zinc-700">
-                            Agriculturist
-                          </div>
-
-                          <div class="max-w-md space-y-3">
-                            <label
-                              v-for="opt in analysisRequestedOptions.filter(o => o.category === 'agriculturist')"
-                              :key="opt.label"
-                              class="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700"
-                            >
+                      <div class="space-y-4">
+                        <div
+                          v-for="group in analysisGroups.filter((group) => group.category === 'chemist')"
+                          :key="group.label"
+                          class="rounded-xl border border-zinc-200 p-4"
+                        >
+                          <label class="flex cursor-pointer items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
                               <input
                                 type="checkbox"
                                 class="h-4 w-4 rounded border-zinc-300 text-[#0E3D1A] focus:ring-0"
-                                :checked="block.analysisRequested.includes(opt.label)"
-                                @change="toggleAnalysisRequested(index, opt.label)"
+                                :checked="hasAllTasks(block, group.tasks)"
+                                @change="toggleAnalysisGroup(index, group)"
                               />
-                              {{ opt.label }}
-                            </label>
-                          </div>
+                              <span class="text-sm font-medium text-zinc-700">
+                                {{ group.label }}
+                              </span>
+                            </div>
+
+                            <span class="text-xs text-zinc-400">
+                              {{ group.tasks.length }} task<span v-if="group.tasks.length !== 1">s</span>
+                            </span>
+                          </label>
+                        </div>
+
+                        <div
+                          v-for="group in analysisGroups.filter((group) => group.category === 'agriculturist')"
+                          :key="group.label"
+                          class="rounded-xl border border-zinc-200 p-4"
+                        >
+                          <label class="flex cursor-pointer items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-zinc-300 text-[#0E3D1A] focus:ring-0"
+                                :checked="hasAllTasks(block, group.tasks)"
+                                @change="toggleAnalysisGroup(index, group)"
+                              />
+                              <span class="text-sm font-medium text-zinc-700">
+                                {{ group.label }}
+                              </span>
+                            </div>
+
+                            <span class="text-xs text-zinc-400">
+                              {{ group.tasks.length }} task<span v-if="group.tasks.length !== 1">s</span>
+                            </span>
+                          </label>
                         </div>
                       </div>
                     </div>
@@ -1121,6 +1213,10 @@ function getBarangays(region: string, province: string, municipality: string): s
                 </div>
 
                 <div class="flex items-center justify-between border-t border-zinc-200 pt-6">
+                  <p v-if="validationError" class="text-sm font-medium text-rose-600">
+                    {{ validationError }}
+                  </p>
+
                   <button
                     type="button"
                     @click="goBack"

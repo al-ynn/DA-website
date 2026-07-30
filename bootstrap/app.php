@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'force.password.change' => \App\Http\Middleware\EnforcePasswordChange::class,
+            'account.status' => \App\Http\Middleware\EnforceAccountStatus::class,
         ]);
 
         $middleware->encryptCookies(except: [

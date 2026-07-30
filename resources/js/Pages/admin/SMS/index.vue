@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head } from '@inertiajs/vue3'
-import type { BreadcrumbItem } from '@/types'
 import { Users, MessageCircle, Send, UserPlus } from 'lucide-vue-next'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type ContactStatus = 'client' | 'unknown' | 'employee'
 
@@ -511,15 +511,6 @@ function openManualAddContact() {
     status: 'client',
   }
   showAddContactModal.value = true
-}
-
-function openAddContact() {
-  if (activeConversation.value && !activeConversation.value.name) {
-    openSaveActiveContact()
-    return
-  }
-
-  openManualAddContact()
 }
 
 async function saveContact() {

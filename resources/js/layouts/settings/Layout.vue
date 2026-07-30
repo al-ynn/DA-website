@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import Heading from '@/Components/Heading.vue';
+import { Button } from '@/Components/ui/button';
+import { Separator } from '@/Components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
+import { edit as editAppearance } from '@/routes/appearance/index';
+import { edit as editProfile } from '@/routes/profile/index';
+import { show } from '@/routes/two-factor/index';
+import { edit as editPassword } from '@/routes/user-password/index';
 import { type NavItem } from '@/types';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit as editProfile } from '@/routes/profile';
-import { show } from '@/routes/two-factor';
-import { edit as editPassword } from '@/routes/user-password';
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -38,13 +38,13 @@ const { isCurrentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
+    <div class="px-4 py-6 md:px-6 md:py-8">
         <Heading
             title="Settings"
             description="Manage your profile and account settings"
         />
 
-        <div class="flex flex-col lg:flex-row lg:space-x-12">
+        <div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
             <aside class="w-full max-w-xl lg:w-48">
                 <nav
                     class="flex flex-col space-y-1 space-x-0"
@@ -74,8 +74,8 @@ const { isCurrentUrl } = useCurrentUrl();
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-5xl">
-                <section class="space-y-12">
+            <div class="min-w-0 flex-1 md:max-w-5xl">
+                <section class="space-y-8">
                     <slot />
                 </section>
             </div>

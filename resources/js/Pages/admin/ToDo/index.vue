@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head } from '@inertiajs/vue3'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
 import type { BreadcrumbItem } from '@/types'
 import ToDoDashboard from './ToDoDashboard.vue'
+
+defineProps<{
+  authUser?: {
+    id: number
+    name: string
+    role: string
+    roles: string[]
+    assignedTasks: string[]
+  }
+  todoRequests?: any[]
+}>()
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -16,6 +27,6 @@ const breadcrumbs: BreadcrumbItem[] = [
   <Head title="To do" />
 
   <AppSidebarLayout :breadcrumbs="breadcrumbs">
-    <ToDoDashboard />
+    <ToDoDashboard :auth-user="authUser" :todo-requests="todoRequests" />
   </AppSidebarLayout>
 </template>

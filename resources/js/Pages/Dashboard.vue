@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
+import { Head } from '@inertiajs/vue3'
+import PlaceholderPattern from '@/Components/PlaceholderPattern.vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
 import { dashboard } from '@/routes'
 import type { BreadcrumbItem } from '@/types'
-import { Head } from '@inertiajs/vue3'
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {

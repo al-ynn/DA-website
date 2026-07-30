@@ -1,87 +1,46 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { Head } from '@inertiajs/vue3';
+import { FileText } from 'lucide-vue-next';
+import Heading from '@/Components/Heading.vue';
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue';
+import SettingsLayout from '@/Layouts/settings/Layout.vue';
+import type { BreadcrumbItem } from '@/types';
 
-type Role = 'reviewer' | 'certifier' | 'noter'
-
-const role = ref<Role>('reviewer')
-const confirmed = ref(false)
-const selectedDoc = ref('/review-documents/T1.pdf')
-
-const documents = [
-  { name: 'T1.pdf', path: '/review-documents/T1.pdf' },
-  { name: 'TR2.pdf', path: '/review-documents/TR2.pdf' },
-  { name: 'TR3.pdf', path: '/review-documents/TR3.pdf' },
-  { name: 'TR4.pdf', path: '/review-documents/TR4.pdf' },
-]
-
-const submitLabel = computed(() => {
-  if (role.value === 'reviewer') return 'Submit Review'
-  if (role.value === 'certifier') return 'Submit Certification'
-  return 'Submit Noting'
-})
-
-const confirmText = computed(() => {
-  if (role.value === 'reviewer') {
-    return 'I confirm that this request has been properly reviewed and is ready for certification.'
-  }
-
-  if (role.value === 'certifier') {
-    return 'I confirm that this request has been properly certified and is ready for noting.'
-  }
-
-  return 'I confirm that this request has been properly noted and is ready for release.'
-})
-
-function submitAction() {
-  if (!confirmed.value) return
-  alert(`${submitLabel.value} submitted.`)
-}
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: 'Templates settings',
+        href: '/settings/templates',
+    },
+];
 </script>
 
 <template>
-  <div class="space-y-5 p-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-zinc-900">
-        Document Approval
-      </h1>
+    <AppSidebarLayout :breadcrumbs="breadcrumbItems">
+        <Head title="Templates settings" />
 
-      <select v-model="role" class="rounded-lg border px-3 py-2 text-sm">
-        <option value="reviewer">Reviewer</option>
-        <option value="certifier">Certifier</option>
-        <option value="noter">Noter</option>
-      </select>
-    </div>
+        <h1 class="sr-only">Templates Settings</h1>
 
-    <div class="flex flex-wrap gap-2">
-      <button
-        v-for="doc in documents"
-        :key="doc.path"
-        type="button"
-        @click="selectedDoc = doc.path"
-        class="rounded-lg border px-4 py-2 text-sm font-semibold"
-        :class="selectedDoc === doc.path ? 'border-[#0E3D1A] bg-[#0E3D1A] text-white' : 'bg-white text-zinc-700'"
-      >
-        {{ doc.name }}
-      </button>
-    </div>
+        <SettingsLayout>
+            <div class="rounded-xl border bg-card p-5 shadow-sm md:p-6">
+                <Heading
+                    variant="small"
+                    title="Templates"
+                    description="Manage reusable document templates"
+                />
 
-    <div class="h-[70vh] overflow-hidden rounded-xl border bg-white shadow-sm">
-      <iframe :src="selectedDoc" class="h-full w-full" />
-    </div>
-
-    <label class="flex cursor-pointer gap-4 rounded-xl border bg-white p-5 text-zinc-800 shadow-sm">
-      <input v-model="confirmed" type="checkbox" class="mt-1 h-4 w-4" />
-      <span>{{ confirmText }}</span>
-    </label>
-
-    <button
-      type="button"
-      :disabled="!confirmed"
-      @click="submitAction"
-      class="w-full rounded-xl px-5 py-4 font-semibold text-white transition"
-      :class="confirmed ? 'bg-[#0E3D1A] hover:opacity-90' : 'cursor-not-allowed bg-zinc-300'"
-    >
-      {{ submitLabel }}
-    </button>
-  </div>
+                <div class="mt-6 rounded-lg border border-dashed bg-muted/30 p-8 text-center">
+                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <FileText class="h-5 w-5" />
+                    </div>
+                    <p class="mt-4 text-sm font-medium">
+                        Template management is not yet available
+                    </p>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        This page is ready for the future template management
+                        workflow.
+                    </p>
+                </div>
+            </div>
+        </SettingsLayout>
+    </AppSidebarLayout>
 </template>

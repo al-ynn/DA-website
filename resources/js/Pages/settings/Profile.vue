@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
-import DeleteUser from '@/components/DeleteUser.vue';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { type BreadcrumbItem } from '@/types';
+import { Form, Head, usePage } from '@inertiajs/vue3';
+import { BadgeCheck, MailWarning } from 'lucide-vue-next';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import { edit } from '@/routes/profile';
-import { send } from '@/routes/verification';
+import DeleteUser from '@/Components/DeleteUser.vue';
+import Heading from '@/Components/Heading.vue';
+import InputError from '@/Components/InputError.vue';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue';
+import SettingsLayout from '@/Layouts/settings/Layout.vue';
+import { edit } from '@/routes/profile/index';
+import { type BreadcrumbItem } from '@/types';
 
 type Props = {
     mustVerifyEmail: boolean;
@@ -38,16 +39,35 @@ const user = page.props.auth.user;
         <h1 class="sr-only">Profile Settings</h1>
 
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
-                <Heading
-                    variant="small"
-                    title="Profile information"
-                    description="Update your name and email address"
-                />
+            <div class="rounded-xl border bg-card p-5 shadow-sm md:p-6">
+                <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <Heading
+                        variant="small"
+                        title="Profile information"
+                        description="Update your name and email address"
+                    />
+
+                    <Badge
+                        v-if="user.email_verified_at"
+                        variant="default"
+                        class="w-fit gap-1.5"
+                    >
+                        <BadgeCheck class="h-3.5 w-3.5" />
+                        Verified
+                    </Badge>
+                    <Badge
+                        v-else
+                        variant="destructive"
+                        class="w-fit gap-1.5"
+                    >
+                        <MailWarning class="h-3.5 w-3.5" />
+                        Email not verified
+                    </Badge>
+                </div>
 
                 <Form
-                    v-bind="ProfileController.update.form()"
-                    class="space-y-6"
+                    :action="ProfileController.update()"
+                    class="space-y-5"
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
@@ -79,28 +99,26 @@ const user = page.props.auth.user;
                         <InputError class="mt-2" :message="errors.email" />
                     </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="-mt-4 text-sm text-muted-foreground">
-                            Your email address is unverified.
-                            <Link
-                                :href="send()"
-                                as="button"
-                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current!"
-                            >
-                                Click here to resend the verification email.
-                            </Link>
-                        </p>
-
-                        <div
-                            v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-green-600"
-                        >
-                            A new verification link has been sent to your email
-                            address.
+                    <div
+                        v-if="!user.email_verified_at"
+                        class="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div>
+                            <p class="text-sm font-medium text-amber-900">
+                                Your email address has not been verified.
+                            </p>
+                            <p class="mt-1 text-xs text-amber-700">
+                                Email verification will be available once the
+                                mail service is connected.
+                            </p>
                         </div>
+
+                        <Button type="button" variant="outline">
+                            Verify Email
+                        </Button>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-end gap-4 border-t pt-5">
                         <Button
                             :disabled="processing"
                             data-test="update-profile-button"

@@ -20,7 +20,7 @@ class TaskPreset extends Model
      */
     public function category(): BelongsTo
     {
-        return $this->belongsTo(TaskCategory::class);
+        return $this->belongsTo(TaskCategory::class, 'task_category_id');
     }
 
     /**

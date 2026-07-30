@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
 import {
   ClipboardCheck,
   LayoutDashboard,
@@ -12,6 +11,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 const props = defineProps<{
   collapsed: boolean

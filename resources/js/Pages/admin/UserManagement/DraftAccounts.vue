@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import {
   ArrowLeft,
   Pencil,
@@ -15,6 +12,9 @@ import {
   Eye,
   TriangleAlert,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type UserCategory = 'ADMIN' | 'CHEMIST' | 'AGRICULTURIST'
 type AdditionalTaskType = 'CHEMIST' | 'AGRICULTURIST'

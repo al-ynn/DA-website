@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import {
   Search,
   Star,
@@ -12,6 +9,9 @@ import {
   List,
   Clock,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type AccountCategory = 'ADMIN' | 'CHEMIST' | 'AGRICULTURIST'
 type AccountFilter = 'ALL' | AccountCategory
@@ -33,6 +33,34 @@ type GroupedUserItem = {
 
 type VisibleGroup = [AccountCategory, GroupedUserItem[]]
 
+type DashboardUser = {
+  id: number
+  first_name: string | null
+  middle_name: string | null
+  last_name: string | null
+  suffix: string | null
+  role: 'admin' | 'chemist' | 'agriculturist'
+  additional_tasks: string[] | null
+  is_disabled: boolean
+  is_draft: boolean
+  updated_at: string
+  login_histories_count?: number
+  reports_count?: number
+}
+
+type DashboardReport = {
+  id: number
+  user_id: number | null
+  date: string
+  created_at: string
+}
+
+type DashboardLogin = {
+  id: number
+  user_id: number | null
+  login_at: string
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'User Dashboard',
@@ -40,155 +68,15 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-function generateMockUsers(): UserSubmission[] {
-  const now = new Date()
-
-  return [
-    {
-      id: '1',
-      name: 'Alyssa Kate Santiago',
-      category: 'ADMIN',
-      additionalTasks: ['CHEMIST', 'AGRICULTURIST'],
-      lastSubmittedCount: 8,
-      lastSubmitted: new Date(now.getTime() - 5 * 60 * 1000),
-    },
-    {
-      id: '2',
-      name: 'Joan Sanchez',
-      category: 'ADMIN',
-      additionalTasks: ['AGRICULTURIST'],
-      lastSubmittedCount: 12,
-      lastSubmitted: new Date(now.getTime() - 1 * 60 * 60 * 1000),
-    },
-    {
-      id: '3',
-      name: 'Robert John Martinez',
-      category: 'CHEMIST',
-      additionalTasks: ['AGRICULTURIST'],
-      lastSubmittedCount: 5,
-      lastSubmitted: new Date(now.getTime() - 97 * 60 * 1000),
-    },
-    {
-      id: '4',
-      name: 'James Miranda',
-      category: 'CHEMIST',
-      additionalTasks: [],
-      lastSubmittedCount: 3,
-      lastSubmitted: new Date(now.getTime() - 172 * 60 * 1000),
-    },
-    {
-      id: '5',
-      name: 'Maria Santos',
-      category: 'AGRICULTURIST',
-      additionalTasks: ['CHEMIST'],
-      lastSubmittedCount: 6,
-      lastSubmitted: new Date(now.getTime() - 3 * 60 * 60 * 1000),
-    },
-    {
-      id: '6',
-      name: 'Carlos Reyes',
-      category: 'AGRICULTURIST',
-      additionalTasks: [],
-      lastSubmittedCount: 4,
-      lastSubmitted: new Date(now.getTime() - 6 * 60 * 60 * 1000),
-    },
-    {
-      id: '7',
-      name: 'Lisa Cruz',
-      category: 'CHEMIST',
-      additionalTasks: [],
-      lastSubmittedCount: 2,
-      lastSubmitted: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: '8',
-      name: 'Mark Johnson',
-      category: 'ADMIN',
-      additionalTasks: ['CHEMIST'],
-      lastSubmittedCount: 15,
-      lastSubmitted: new Date(now.getTime() - 30 * 60 * 1000),
-    },
-    {
-      id: '9',
-      name: 'Sarah Williams',
-      category: 'AGRICULTURIST',
-      additionalTasks: [],
-      lastSubmittedCount: 7,
-      lastSubmitted: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-    },
-    {
-      id: '10',
-      name: 'David Brown',
-      category: 'ADMIN',
-      additionalTasks: [],
-      lastSubmittedCount: 10,
-      lastSubmitted: new Date(now.getTime() - 15 * 60 * 1000),
-    },
-    {
-      id: '11',
-      name: 'Emily Davis',
-      category: 'CHEMIST',
-      additionalTasks: ['AGRICULTURIST'],
-      lastSubmittedCount: 9,
-      lastSubmitted: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000),
-    },
-  ]
-}
-
-function getSeededUsers(): UserSubmission[] {
-  return [
-    {
-      id: 'seed-1',
-      name: 'Test User',
-      category: 'ADMIN',
-      additionalTasks: [],
-      lastSubmittedCount: 0,
-      lastSubmitted: new Date(),
-    },
-    {
-      id: 'seed-2',
-      name: 'Ean Test',
-      category: 'ADMIN',
-      additionalTasks: [],
-      lastSubmittedCount: 0,
-      lastSubmitted: new Date(),
-    },
-  ]
-}
-
-const USERS_STORAGE_KEY = 'rsl-users'
-
-function buildFullNameFromStoredUser(user: any) {
-  const base = [user.surname, user.givenname, user.middlename]
-    .filter(Boolean)
-    .join(', ')
-    .replace(', ,', ',')
-
-  return user.suffix ? `${base} ${user.suffix}` : base
-}
-
-function getStoredCreatedUsers(): UserSubmission[] {
-  try {
-    const raw = localStorage.getItem(USERS_STORAGE_KEY)
-    if (!raw) return []
-
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-
-    return parsed
-      .filter((user) => user.status === 'ACTIVE')
-      .map((user) => ({
-        id: `stored-${user.id}`,
-        name: buildFullNameFromStoredUser(user),
-        category: user.category,
-        additionalTasks: user.tasks ?? [],
-        lastSubmittedCount: 0,
-        lastSubmitted: new Date(),
-      }))
-  } catch {
-    return []
+const props = defineProps<{
+  users: DashboardUser[]
+  latestReports?: DashboardReport[]
+  latestLogins?: DashboardLogin[]
+  metrics?: {
+    total_users?: number
+    total_submissions?: number
   }
-}
+}>()
 
 function getRelativeTime(date: Date): string {
   const now = new Date()
@@ -215,11 +103,63 @@ function getRelativeTime(date: Date): string {
   return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`
 }
 
-const allUsers = ref<UserSubmission[]>([
-  ...generateMockUsers(),
-  ...getStoredCreatedUsers(),
-  ...getSeededUsers(),
-])
+const allUsers = computed<UserSubmission[]>(() => {
+  const reportActivity = new Map<number, number>()
+  const loginActivity = new Map<number, number>()
+
+  for (const report of props.latestReports ?? []) {
+    if (!report.user_id) continue
+    const timestamp = new Date(report.date || report.created_at).getTime()
+    const current = reportActivity.get(report.user_id) ?? 0
+    if (timestamp > current) {
+      reportActivity.set(report.user_id, timestamp)
+    }
+  }
+
+  for (const login of props.latestLogins ?? []) {
+    if (!login.user_id) continue
+    const timestamp = new Date(login.login_at).getTime()
+    const current = loginActivity.get(login.user_id) ?? 0
+    if (timestamp > current) {
+      loginActivity.set(login.user_id, timestamp)
+    }
+  }
+
+  return props.users
+    .filter((user) => !user.is_disabled && !user.is_draft)
+    .map((user) => {
+      const fullName = [user.last_name, user.first_name, user.middle_name]
+        .filter(Boolean)
+        .join(', ')
+        .replace(', ,', ',')
+
+      const taskMap = (user.additional_tasks ?? []).map((task) =>
+        task === 'chemist'
+          ? 'CHEMIST'
+          : 'AGRICULTURIST',
+      ) as AccountCategory[]
+
+      const activityTime = Math.max(
+        reportActivity.get(user.id) ?? 0,
+        loginActivity.get(user.id) ?? 0,
+        new Date(user.updated_at).getTime(),
+      )
+
+      return {
+        id: String(user.id),
+        name: user.suffix ? `${fullName} ${user.suffix}` : fullName,
+        category:
+          user.role === 'admin'
+            ? 'ADMIN'
+            : user.role === 'chemist'
+              ? 'CHEMIST'
+              : 'AGRICULTURIST',
+        additionalTasks: taskMap.filter((task): task is AccountCategory => task !== undefined),
+        lastSubmittedCount: Number(user.reports_count ?? 0),
+        lastSubmitted: new Date(activityTime > 0 ? activityTime : user.updated_at),
+      }
+    })
+})
 
 const accountFilter = ref<AccountFilter>('ALL')
 const timeFilter = ref<TimeFilter>('all')

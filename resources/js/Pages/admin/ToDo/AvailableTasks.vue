@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import {
   ListTodo,
   Hand,
   FlaskConical,
   Tractor,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type UserRole = 'admin' | 'chemist' | 'agriculturist'
 
@@ -44,6 +44,14 @@ type TodoRequest = {
 }
 
 const props = defineProps<{
+  authUser?: {
+    id: number
+    name: string
+    role: string
+    roles: string[]
+    assignedTasks: string[]
+  }
+  todoRequests?: TodoRequest[]
   taskType?: string
 }>()
 
@@ -57,23 +65,12 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-const currentUser = ref({
-  id: 'user-1',
-  name: 'Ean Test',
-  roles: ['admin', 'chemist', 'agriculturist'] as UserRole[],
-  assignedTasks: [
-    'Reviewer',
-    'Certifier',
-    'Noter',
-    'pH',
-    'Zinc',
-    'EC Analysis',
-    'Soil Moisture',
-    'Soil Texture',
-    'Particle Size Analysis',
-    'Fertilizer Recommendation',
-  ] as TaskType[],
-})
+const currentUser = computed(() => ({
+  id: String(props.authUser?.id ?? ''),
+  name: props.authUser?.name ?? '',
+  roles: (props.authUser?.roles ?? []) as UserRole[],
+  assignedTasks: (props.authUser?.assignedTasks ?? []) as TaskType[],
+}))
 
 const chemistTasks: TaskType[] = [
   'pH',
@@ -93,10 +90,6 @@ const agriculturistTasks: TaskType[] = [
 
 const grabTaskTypes: TaskType[] = [...chemistTasks, ...agriculturistTasks]
 
-const STORAGE_KEY = `todo-my-requests-${currentUser.value.id}`
-const AVAILABLE_TASKS_STORAGE_KEY = 'todo-available-tasks'
-const OLD_AVAILABLE_TASKS_STORAGE_KEY = 'available-tasks'
-
 const roleFilter = ref<'all' | 'chemist' | 'agriculturist'>('all')
 const chemistTaskFilter = ref('')
 const agriculturistTaskFilter = ref('')
@@ -109,66 +102,9 @@ function normalizeSampleDescription(value: unknown): SampleDescription {
   return 'Soil'
 }
 
-function normalizeSavedTask(item: any): TodoRequest {
-  return {
-    ...item,
-    taskType: item.taskType as TaskType,
-    sampleDescription: normalizeSampleDescription(item.sampleDescription),
-    status: item.status ?? 'available',
-  }
-}
-
-function getSavedAvailableTasks(): TodoRequest[] {
-  try {
-    if (typeof localStorage === 'undefined') return []
-
-    const rawMain = localStorage.getItem(AVAILABLE_TASKS_STORAGE_KEY)
-    const rawOld = localStorage.getItem(OLD_AVAILABLE_TASKS_STORAGE_KEY)
-
-    const mainParsed = rawMain ? JSON.parse(rawMain) : []
-    const oldParsed = rawOld ? JSON.parse(rawOld) : []
-
-    const combined = [
-      ...(Array.isArray(mainParsed) ? mainParsed : []),
-      ...(Array.isArray(oldParsed) ? oldParsed : []),
-    ]
-
-    const unique = combined.filter(
-      (item, index, self) =>
-        index === self.findIndex((task) =>
-          task.id === item.id ||
-          (
-            task.testRequestCode === item.testRequestCode &&
-            task.labCode === item.labCode &&
-            task.taskType === item.taskType &&
-            task.role === item.role
-          ),
-        ),
-    )
-
-    return unique
-      .map(normalizeSavedTask)
-      .filter((task) => task.role === 'chemist' || task.role === 'agriculturist')
-  } catch {
-    return []
-  }
-}
-
-function saveAvailableTasks(items: TodoRequest[]) {
-  try {
-    if (typeof localStorage === 'undefined') return
-
-    localStorage.setItem(
-      AVAILABLE_TASKS_STORAGE_KEY,
-      JSON.stringify(items.filter((task) => task.role === 'chemist' || task.role === 'agriculturist')),
-    )
-    localStorage.removeItem(OLD_AVAILABLE_TASKS_STORAGE_KEY)
-  } catch {
-    // frontend-only fallback
-  }
-}
-
-const requests = ref<TodoRequest[]>(getSavedAvailableTasks())
+const requests = computed<TodoRequest[]>(() =>
+  (props.todoRequests ?? []).filter((task) => task.role === 'chemist' || task.role === 'agriculturist'),
+)
 
 const allowedTaskTypes = computed<TaskType[]>(() => currentUser.value.assignedTasks)
 
@@ -268,24 +204,11 @@ function setRoleFilter(role: 'all' | 'chemist' | 'agriculturist') {
 function getSamplePrefix(sampleDescription: SampleDescription) {
   if (sampleDescription === 'Soil') return 'S'
   if (sampleDescription === 'Water') return 'W'
-  return 'FM'
+  return 'F'
 }
 
 function getLabCode(request: TodoRequest) {
-  if (request.labCode) return request.labCode
-
-  const year = String(new Date().getFullYear()).slice(-2)
-  const prefix = getSamplePrefix(request.sampleDescription)
-
-  const sameSampleRequests = requests.value.filter(
-    (item) =>
-      item.sampleDescription === request.sampleDescription &&
-      (item.role === 'chemist' || item.role === 'agriculturist'),
-  )
-
-  const sampleIndex = sameSampleRequests.findIndex((item) => item.id === request.id) + 1
-
-  return `${prefix}${year}-${String(sampleIndex).padStart(4, '0')}`
+  return request.labCode || request.testRequestCode || `TASK-${request.id}`
 }
 
 function getDisplayCode(request: TodoRequest) {
@@ -293,26 +216,15 @@ function getDisplayCode(request: TodoRequest) {
 }
 
 function getStoredMyRequests(): TodoRequest[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+  return []
 }
 
 function setStoredMyRequests(items: TodoRequest[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  void items
 }
 
 function addToMyTodo(request: TodoRequest) {
-  const existing = getStoredMyRequests()
-  const withoutDuplicate = existing.filter((item) => item.id !== request.id)
-
   setStoredMyRequests([
-    ...withoutDuplicate,
     {
       ...request,
       labCode: getLabCode(request),
@@ -334,7 +246,6 @@ function handleGrabTask(requestId: string) {
   request.labCode = getLabCode(request)
 
   addToMyTodo(request)
-  saveAvailableTasks(requests.value)
 }
 </script>
 

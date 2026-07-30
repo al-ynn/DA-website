@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             TaskCategorySeeder::class,
             LaboratoryTaskSeeder::class,
+            ReportSeeder::class,
+            LoginHistorySeeder::class,
         ]);
     }
 }

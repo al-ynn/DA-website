@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
 import { FlaskConical, Tractor, Star } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 
 type UserRole = 'admin' | 'chemist' | 'agriculturist'
 
@@ -38,35 +38,30 @@ type TodoRequest = {
   resultRemarks?: string
 }
 
-const currentUser = ref({
-  id: 'user-1',
-  name: 'Super Admin',
-  roles: ['admin', 'chemist', 'agriculturist'] as UserRole[],
-  assignedTasks: [
-    'Reviewer',
-    'Certifier',
-    'Noter',
-    'pH',
-    'EC Analysis',
-    'Zinc',
-    'Copper',
-    'Iron',
-    'Manganese',
-    'Soil Moisture',
-    'Soil Texture',
-    'Particle Size Analysis',
-    'Fertilizer Recommendation',
-  ] as TaskType[],
-})
+const props = defineProps<{
+  authUser?: {
+    id: number
+    name: string
+    role: string
+    roles: string[]
+    assignedTasks: string[]
+  }
+  todoRequests?: TodoRequest[]
+}>()
 
-const AVAILABLE_TASKS_STORAGE_KEY = 'todo-available-tasks'
-const MY_TASKS_STORAGE_KEY = `todo-my-requests-${currentUser.value.id}`
+const currentUser = computed(() => ({
+  id: String(props.authUser?.id ?? ''),
+  name: props.authUser?.name ?? '',
+  roles: (props.authUser?.roles ?? []) as UserRole[],
+  assignedTasks: (props.authUser?.assignedTasks ?? []) as TaskType[],
+}))
 
 const completedRequests = ref<string[]>([])
 const selectedRole = ref<'all' | UserRole>('all')
 const adminFilter = ref<TaskType | ''>('')
 const chemistFilter = ref<TaskType | ''>('')
 const agriFilter = ref<TaskType | ''>('')
+const stagedRequests = ref<TodoRequest[]>([])
 
 const resultValues = ref<Record<string, string>>({})
 const showSubmitConfirm = ref(false)
@@ -90,28 +85,14 @@ const agriTasks: TaskType[] = [
   'Fertilizer Recommendation',
 ]
 
-function getStoredTasks(): TodoRequest[] {
-  try {
-    const available = JSON.parse(localStorage.getItem(AVAILABLE_TASKS_STORAGE_KEY) || '[]')
-    const mine = JSON.parse(localStorage.getItem(MY_TASKS_STORAGE_KEY) || '[]')
-    const all = [...available, ...mine]
-
-    const unique = all.filter(
-      (item, index, self) => index === self.findIndex((task) => task.id === item.id),
-    )
-
-    return unique.filter(
-      (task) =>
-        task.status === 'assigned' &&
-        task.assignedTo === currentUser.value.id &&
-        currentUser.value.roles.includes(task.role),
-    )
-  } catch {
-    return []
-  }
-}
-
-const myRequests = ref<TodoRequest[]>(getStoredTasks())
+const myRequests = computed<TodoRequest[]>(() =>
+  [...(props.todoRequests ?? []), ...stagedRequests.value].filter(
+    (task) =>
+      task.status === 'assigned' &&
+      task.assignedTo === String(currentUser.value.id) &&
+      currentUser.value.roles.includes(task.role),
+  ),
+)
 
 const visibleRequests = computed(() => {
   let data = myRequests.value.filter((request) =>
@@ -196,7 +177,7 @@ function getTaskIcon(taskType: TaskType) {
 function getSamplePrefix(sampleDescription?: SampleDescription) {
   if (sampleDescription === 'Soil') return 'S'
   if (sampleDescription === 'Water') return 'W'
-  return 'FM'
+  return 'F'
 }
 
 function getTestRequestCode(request: TodoRequest) {
@@ -206,7 +187,7 @@ function getTestRequestCode(request: TodoRequest) {
   const year = new Date().getFullYear()
   const requestIndex = myRequests.value.findIndex((item) => item.id === request.id) + 1
 
-  return `RSL-${year}-${String(requestIndex).padStart(4, '0')}`
+  return `RSL-${year}-${String(requestIndex).padStart(3, '0')}`
 }
 
 function getFlowKey(request: TodoRequest) {
@@ -227,7 +208,7 @@ function getLabCode(request: TodoRequest) {
 
   const sampleIndex = sameSampleRequests.findIndex((item) => item.id === request.id) + 1
 
-  return `${prefix}${year}-${String(sampleIndex).padStart(4, '0')}`
+  return `${prefix}${year}-${String(sampleIndex).padStart(3, '0')}`
 }
 
 function getDisplayCode(request: TodoRequest) {
@@ -255,7 +236,7 @@ function getPlaceholder(taskType: TaskType) {
 }
 
 function saveMyTasks() {
-  localStorage.setItem(MY_TASKS_STORAGE_KEY, JSON.stringify(myRequests.value))
+  void myRequests.value
 }
 
 function askSubmitTask(request: TodoRequest) {
@@ -287,8 +268,6 @@ function submitTask(request: TodoRequest) {
 
   completedRequests.value.push(request.id)
 
-  myRequests.value = myRequests.value.filter((task) => task.id !== request.id)
-
   const requestKey = getFlowKey(request)
 
   const hasRemainingSameStageTasks = myRequests.value.some(
@@ -299,8 +278,6 @@ function submitTask(request: TodoRequest) {
   )
 
   if (request.role === 'chemist' && !hasRemainingSameStageTasks) {
-    const available = JSON.parse(localStorage.getItem(AVAILABLE_TASKS_STORAGE_KEY) || '[]')
-
     const agriculturistTask: TodoRequest = {
       ...request,
       id: crypto.randomUUID(),
@@ -312,10 +289,7 @@ function submitTask(request: TodoRequest) {
       resultValue: '',
     }
 
-    localStorage.setItem(
-      AVAILABLE_TASKS_STORAGE_KEY,
-      JSON.stringify([...available, agriculturistTask]),
-    )
+    stagedRequests.value.push(agriculturistTask)
   }
 
   if (request.role === 'agriculturist' && !hasRemainingSameStageTasks) {
@@ -330,10 +304,8 @@ function submitTask(request: TodoRequest) {
       resultValue: '',
     }
 
-    myRequests.value.push(reviewerTask)
+    stagedRequests.value.push(reviewerTask)
   }
-
-  saveMyTasks()
 }
 
 function getActionLabel(taskType: TaskType) {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import { ArrowLeft, Save, X, CircleCheckBig, FileText, TriangleAlert } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 type UserCategory = 'ADMIN' | 'CHEMIST' | 'AGRICULTURIST'
 type AdditionalTaskType = 'CHEMIST' | 'AGRICULTURIST'
@@ -193,32 +193,33 @@ const notificationDescription = computed(() =>
 )
 
 const invalidFieldsList = computed(() => {
-    const labels: Record<string, string> = {
-        surname: 'Surname',
-        givenname: 'Given Name',
-        email: 'Email',
-        sex: 'Sex',
-        birthdate: 'Birthdate',
-        contactnumber: 'Contact Number',
-        category: 'Role (Main Task)',
-        status: 'Status',
+  const labels: Record<string, string> = {
+    surname: 'Surname',
+    givenname: 'Given Name',
+    email: 'Email',
+    sex: 'Sex',
+    birthdate: 'Birthdate',
+    contactnumber: 'Contact Number',
+    category: 'Role (Main Task)',
+    status: 'Status',
+    first_name: 'Given Name',
+    last_name: 'Surname',
+    middle_name: 'Middle Name',
+    contact_number: 'Contact Number',
+    role: 'Role (Main Task)',
+  }
 
-        // Laravel fields
-        first_name: 'Given Name',
-        last_name: 'Surname',
-        middle_name: 'Middle Name',
-        contact_number: 'Contact Number',
-        role: 'Role (Main Task)',
-    }
+  const clientErrors = Object.entries(fieldErrors.value)
+    .filter(([, message]) => Boolean(message))
+    .map(([key, message]) => message || labels[key] || key)
 
-    const clientErrors = Object.keys(fieldErrors.value)
-        .filter((key) => fieldErrors.value[key as FormField])
-        .map((key) => labels[key] ?? key)
+  const serverErrors = Object.entries(form.errors)
+    .map(([key, message]) => {
+      const label = labels[key] ?? key
+      return message || `${label} is invalid.`
+    })
 
-    const serverErrors = Object.keys(form.errors)
-        .map((key) => labels[key] ?? key)
-
-    return [...new Set([...clientErrors, ...serverErrors])]
+  return [...new Set([...clientErrors, ...serverErrors])]
 })
 
 function goBack() {
@@ -425,19 +426,20 @@ function saveAsDraft() {
             is_disabled: false,
             is_draft: true,
         }))
-        .post('/user-management', {
-            preserveScroll: true,
+    .post('/user-management', {
+        preserveScroll: true,
 
-            onSuccess: () => {
+        onSuccess: () => {
                 isDraft.value = true
                 savedSuccessfully.value = true
                 showSuccessNotification.value = true
-            },
+        },
 
-            onError: (errors) => {
-                console.log(errors)
-            },
-        })
+        onError: (errors) => {
+            console.log(errors)
+            showErrorNotification.value = true
+        },
+    })
 }
 
 function saveAccount() {
@@ -477,7 +479,7 @@ function saveAccount() {
       is_disabled: data.status === 'DISABLED',
       is_draft: false,
   }))
-  .post('/user-management', {
+    .post('/user-management', {
     preserveScroll: true,
 
     onSuccess: () => {
@@ -487,9 +489,6 @@ function saveAccount() {
     },
 
     onError: (errors) => {
-      console.log('Laravel Errors:', errors)
-      console.log('Form Errors:', form.errors)
-
       showErrorNotification.value = true
     },
   })

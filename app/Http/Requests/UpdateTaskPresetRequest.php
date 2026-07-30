@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTaskPresetRequest extends FormRequest
 {
@@ -38,7 +39,14 @@ class UpdateTaskPresetRequest extends FormRequest
             ],
 
             'laboratory_tasks.*' => [
-                'exists:laboratory_tasks,id',
+                'integer',
+                'distinct',
+                Rule::exists('laboratory_tasks', 'id')->where(
+                    fn ($query) => $query->where(
+                        'task_category_id',
+                        $this->integer('task_category_id')
+                    )
+                ),
             ],
         ];
     }

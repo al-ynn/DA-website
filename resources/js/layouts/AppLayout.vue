@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import NavMain from '@/components/NavMain.vue'
-import NavUser from '@/components/NavUser.vue'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Link } from '@inertiajs/vue3'
+import {
+    CheckSquare,
+    LayoutDashboard,
+    MessageCircle,
+    Users,
+    FileText,
+    ClipboardList,
+} from 'lucide-vue-next'
+import NavUser from '@/Components/NavUser.vue'
+import { SidebarTrigger } from '@/Components/ui/sidebar'
 
 import {
     SidebarProvider,
@@ -12,56 +20,15 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '@/components/ui/sidebar'
+} from '@/Components/ui/sidebar'
 
-import { Link } from '@inertiajs/vue3'
-import type { NavItem, BreadcrumbItem } from '@/types'
+import type { BreadcrumbItem } from '@/types'
 
-import {
-    CheckSquare,
-    LayoutDashboard,
-    MessageCircle,
-    Users,
-    FileText,
-    ClipboardList,
-} from 'lucide-vue-next'
 
 defineProps<{
     breadcrumbs?: BreadcrumbItem[]
 }>()
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'To do',
-        href: '#',
-        icon: CheckSquare,
-    },
-    {
-        title: 'User Dashboard',
-        href: '#',
-        icon: LayoutDashboard,
-    },
-    {
-        title: 'Two-way SMS',
-        href: '#',
-        icon: MessageCircle,
-    },
-    {
-        title: 'User Management',
-        href: '#',
-        icon: Users,
-    },
-    {
-        title: 'Reports',
-        href: '#',
-        icon: FileText,
-    },
-    {
-        title: 'Task Management',
-        href: '#',
-        icon: ClipboardList,
-    },
-]
 </script>
 
 <template>

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import type { BreadcrumbItem } from '@/types'
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,6 +7,13 @@ import {
   ChevronDown,
   Clock3,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
+
+const props = defineProps<{
+  draftReport?: Record<string, any> | null
+}>()
 
 type ClientClassification =
   | 'PWD'
@@ -25,10 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Customer Information', href: '/test-reports/create/page-1' },
 ]
 
-const DRAFT_KEY = 'test-request-draft'
-const savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
-
-const form = ref(savedDraft.page1 ?? {
+const form = ref({
   surname: '',
   firstName: '',
   middleName: '',
@@ -45,6 +46,27 @@ const form = ref(savedDraft.page1 ?? {
   samplingTime: '',
 })
 
+if (props.draftReport) {
+  form.value = {
+    surname: props.draftReport.surname ?? '',
+    firstName: props.draftReport.first_name ?? '',
+    middleName: props.draftReport.middle_name ?? '',
+    rsbsaNo: props.draftReport.rsbsa_no ?? '',
+    companyName: props.draftReport.company_name ?? '',
+    address: props.draftReport.address ?? '',
+    contactNumber: props.draftReport.contact_number ?? '+63',
+    emailAddress: props.draftReport.email_address ?? '',
+    sex: props.draftReport.sex ?? '',
+    age: props.draftReport.age ?? '',
+    classification: Array.isArray(props.draftReport.classification)
+      ? props.draftReport.classification
+      : String(props.draftReport.classification ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    studentType: props.draftReport.student_type ?? '',
+    samplingDate: String(props.draftReport.sampling_date ?? '').slice(0, 10),
+    samplingTime: props.draftReport.sampling_time ?? '',
+  }
+}
+
 const classificationOptions: ClientClassification[] = [
   'PWD',
   'SC',
@@ -54,6 +76,7 @@ const classificationOptions: ClientClassification[] = [
 ]
 
 const showClassificationDropdown = ref(false)
+const validationError = ref('')
 
 const selectedClassificationLabel = computed(() => {
   if (!form.value.classification.length) return 'Select classification'
@@ -168,25 +191,112 @@ function goBack() {
   router.visit('/reports')
 }
 
-function savePage1() {
-  const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
-
-  localStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify({
-      ...draft,
-      page1: {
-        ...form.value,
-        contactNumber: normalizePhoneForBackend(form.value.contactNumber),
-      },
-    }),
-  )
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
 }
 
-function goNext() {
+function buildDraftPayload() {
+  return {
+    draft_id: props.draftReport?.id ?? null,
+    user_id: null,
+    request_code: props.draftReport?.request_code ?? null,
+    date: new Date().toISOString().split('T')[0],
+    status: 'draft',
+    is_draft: true,
+    surname: form.value.surname.trim() || null,
+    first_name: form.value.firstName.trim() || null,
+    middle_name: form.value.middleName.trim() || null,
+    full_name: [form.value.firstName, form.value.middleName, form.value.surname].filter(Boolean).join(' '),
+    rsbsa_no: form.value.rsbsaNo.trim() || null,
+    company_name: form.value.companyName.trim() || null,
+    classification: form.value.classification.join(', '),
+    student_type: form.value.studentType || null,
+    sex: form.value.sex || null,
+    age: form.value.age || null,
+    address: form.value.address.trim() || null,
+    contact_number: normalizePhoneForBackend(form.value.contactNumber),
+    email_address: form.value.emailAddress.trim() || null,
+    sampling_date: form.value.samplingDate || null,
+    sampling_time: form.value.samplingTime || null,
+    samples: [],
+  }
+}
+
+async function goNext() {
   normalizeRsbsaNo()
-  savePage1()
-  router.visit('/test-reports/create/page-2?from=reports')
+
+  const requiredFieldError = [
+    [!form.value.surname.trim(), 'Surname'],
+    [!form.value.firstName.trim(), 'First Name'],
+    [!form.value.address.trim(), 'Address'],
+    [!form.value.contactNumber.trim() || form.value.contactNumber === '+63', 'Contact No.'],
+    [!form.value.classification.length, 'Client Classification'],
+    [!form.value.sex, 'Sex'],
+    [!String(form.value.age || '').trim(), 'Age'],
+  ].find(([missing]) => missing)?.[1]
+
+  if (form.value.classification.includes('Student') && !form.value.studentType) {
+    validationError.value = 'Please specify if Student.'
+    return
+  }
+
+  if (requiredFieldError) {
+    validationError.value = `${requiredFieldError} is required.`
+    return
+  }
+
+  validationError.value = ''
+
+  const endpoint = '/reports/draft'
+  let response: Response
+
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': getCsrfToken(),
+      },
+      body: JSON.stringify(buildDraftPayload()),
+    })
+  } catch {
+    validationError.value = 'Unable to save your information. Please check your connection and try again.'
+    return
+  }
+
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type') || ''
+    let message = 'Unable to save draft. Please try again.'
+
+    try {
+      if (contentType.includes('application/json')) {
+        const data = await response.json() as { message?: string; errors?: Record<string, string[]> }
+        if (data?.message) {
+          message = data.message
+        }
+        const firstError = data?.errors ? Object.values(data.errors).flat().find(Boolean) : ''
+        if (firstError) {
+          message = firstError
+        }
+      } else {
+        const text = await response.text()
+        if (text) {
+          message = text
+        }
+      }
+    } catch {
+      // Keep the generic fallback below.
+    }
+
+    validationError.value = message
+    return
+  }
+
+  const data = await response.json() as { report?: { id?: number } }
+  router.visit(`/test-reports/create/page-2?draft_id=${data.report?.id ?? props.draftReport?.id}`)
 }
 
 const now = new Date()
@@ -427,8 +537,9 @@ if (!form.value.samplingTime) {
                         Age <span class="text-rose-500">*</span>
                       </label>
                       <input
-                        v-model="form.age"
+                        v-model.number="form.age"
                         type="number"
+                        min="0"
                         class="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none focus:border-[#0E3D1A]"
                       />
                     </div>
@@ -470,6 +581,10 @@ if (!form.value.samplingTime) {
             </div>
 
             <div class="mt-8 flex items-center justify-between border-t border-zinc-200 pt-6">
+              <p v-if="validationError" class="text-sm font-medium text-rose-600">
+                {{ validationError }}
+              </p>
+
               <button
                 type="button"
                 @click="goBack"

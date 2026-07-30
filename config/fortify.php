@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/todo',
 
     /*
     |--------------------------------------------------------------------------
@@ -89,6 +89,12 @@ return [
     'prefix' => '',
 
     'domain' => null,
+
+    'paths' => [
+        'password' => [
+            'confirm' => '/confirm-password',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -146,7 +152,6 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
-        Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,

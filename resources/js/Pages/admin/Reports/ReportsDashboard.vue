@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import {
   Search,
@@ -12,6 +11,7 @@ import {
   Plus,
   SlidersHorizontal,
 } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CreateTestRequestEntryModal from './components/CreateTestRequestEntryModal.vue'
 import CustomizeTableViewModal from './components/CustomizeTableViewModal.vue'
 
@@ -74,6 +74,7 @@ type SampleRecord = {
 
 type Report = {
   id: number
+  requestCode?: string
   date: string
   status: ReportStatus
   surname: string
@@ -125,13 +126,18 @@ type TableColumn = {
 const REQUEST_COLUMN_STORAGE_KEY = 'reports-test-request-visible-columns'
 const SAMPLE_COLUMN_STORAGE_KEY = 'reports-sample-visible-columns'
 
-const SAVED_REPORT_KEYS = [
-  'test-requests',
-  'testRequests',
-  'reports',
-  'rsl-test-requests',
-  'created-test-requests',
-]
+const props = defineProps<{
+  reports?: {
+    data?: any[]
+  }
+  summary?: Record<string, number>
+  filters?: {
+    search?: string
+    status?: string
+    date_range?: string
+    sort_by?: string
+  }
+}>()
 
 const pageMode = ref<PageMode>('test-request')
 
@@ -247,7 +253,16 @@ const filters = ref<FilterState>({
 const searchQuery = ref('')
 const showCreateModal = ref(false)
 const showCustomizeModal = ref(false)
+const showPaymentModal = ref(false)
 const pageRoot = ref<HTMLElement | null>(null)
+const editingPaymentReport = ref<Report | null>(null)
+const paymentDraft = ref({
+  paymentStatus: 'Pending',
+  deposit: '',
+  orNo: '',
+  paymentDate: '',
+  balance: '',
+})
 let reportsScrollContainer: HTMLElement | null = null
 
 function getScrollableParent(element: HTMLElement | null) {
@@ -280,8 +295,17 @@ function normalizeStatus(value: unknown): ReportStatus {
 }
 
 function normalizeSample(item: any, index: number): SampleRecord {
+  const fallbackPrefix = String(item.sampleDescription || item.sample_description || '')
+    .toLowerCase() === 'water'
+    ? 'W'
+    : String(item.sampleDescription || item.sample_description || '')
+        .toLowerCase() === 'fertilizer'
+      ? 'F'
+      : 'S'
+  const fallbackYear = String(new Date().getFullYear()).slice(-2)
+
   return {
-    laboratoryCode: item.laboratoryCode || item.labCode || item.lab_code || `LAB-${index + 1}`,
+    laboratoryCode: item.laboratoryCode || item.labCode || item.lab_code || `${fallbackPrefix}${fallbackYear}-${String(index + 1).padStart(3, '0')}`,
     sampleId: item.sampleId || item.sampleID || item.sample_id || '',
     sampleDescription: item.sampleDescription || item.description || item.sample_description || '',
     sampleType: item.sampleType || item.sample_type || '',
@@ -337,6 +361,7 @@ function normalizeReport(item: any, index: number): Report {
 
   return {
     id: Number(item.id || index + 1),
+    requestCode: item.requestCode || item.request_code || '',
     date: item.date || item.dateReceived || item.createdAt || new Date().toISOString().slice(0, 10),
     status: normalizeStatus(item.status),
     rsbsaNo: item.rsbsaNo || item.rsbsa_no || '',
@@ -370,93 +395,18 @@ function normalizeReport(item: any, index: number): Report {
   }
 }
 
-function loadReports(): Report[] {
-  if (typeof window === 'undefined') return []
+const allReports = computed<Report[]>(() =>
+  (props.reports?.data ?? []).map((item, index) => normalizeReport(item, index)),
+)
 
-  for (const key of SAVED_REPORT_KEYS) {
-    try {
-      const raw = localStorage.getItem(key)
-      if (!raw) continue
-
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-
-        const reports = parsed.map(normalizeReport)
-
-        console.log(
-          reports.map(r => ({
-            id: r.id,
-            samples: r.samples.map(s => ({
-              lab: s.laboratoryCode,
-              sample: s.sampleId,
-            })),
-          }))
-        )
-
-        return reports
-        
-      }
-    } catch {
-      continue
-    }
-  }
-
-  try {
-    const rawTasks = localStorage.getItem('todo-available-tasks')
-    if (!rawTasks) return []
-
-    const tasks = JSON.parse(rawTasks)
-    if (!Array.isArray(tasks)) return []
-
-    const grouped = tasks.reduce((acc: Record<string, any[]>, task: any) => {
-      if (!task.testRequestCode) return acc
-      if (!acc[task.testRequestCode]) acc[task.testRequestCode] = []
-      acc[task.testRequestCode].push(task)
-      return acc
-    }, {})
-
-    return Object.entries(grouped).map(([testRequestCode, taskGroup], index) => ({
-      id: Number(testRequestCode.split('-').pop()) || index + 1,
-      date: new Date().toISOString().slice(0, 10),
-      status: 'Test Request submitted',
-      surname: '',
-      firstName: '',
-      middleName: '',
-      fullName: '—',
-      companyName: '—',
-      paymentStatus: 'Pending',
-      totalAmountDue: 0,
-      samples: Object.values(
-        taskGroup.reduce((acc: Record<string, any>, task: any) => {
-          const labCode = task.labCode || 'LAB'
-
-          if (!acc[labCode]) {
-            acc[labCode] = {
-              laboratoryCode: labCode,
-              sampleId: task.sampleLabel || '',
-              sampleDescription: task.sampleDescription || '',
-              analysisRequested: [],
-              subtotal: 0,
-            }
-          }
-
-          if (task.taskType && !acc[labCode].analysisRequested.includes(task.taskType)) {
-            acc[labCode].analysisRequested.push(task.taskType)
-          }
-
-          return acc
-        }, {}),
-      ).map((sample: any) => ({
-        ...sample,
-        analysisRequested: sample.analysisRequested.join(', '),
-      })),
-    }))
-  } catch {
-    return []
-  }
-}
-
-const allReports = ref<Report[]>(loadReports())
+const createRequestClients = computed(() =>
+  allReports.value.map((report) => ({
+    id: String(report.id),
+    code: report.rsbsaNo || getReportId(report),
+    name: report.fullName || '—',
+    type: report.classification || report.companyName || 'Client',
+  })),
+)
 
 const currentColumns = computed(() => {
   console.log('PAGE MODE:', pageMode.value)
@@ -535,8 +485,10 @@ const tableMinWidth = computed(() => {
 })
 
 function getReportId(report: Report) {
+  if (report.requestCode) return report.requestCode
+
   const year = new Date(report.date).getFullYear()
-  return `RSL-${year}-${String(report.id).padStart(4, '0')}`
+  return `RSL-${year}-${String(report.id).padStart(3, '0')}`
 }
 
 function getLabCodeDisplay(report: Report) {
@@ -868,12 +820,97 @@ function handleAddRecord(clientId: string) {
 }
 
 function handleViewReport(row: ActiveRow) {
-  console.log('Viewing:', row)
+  const reportId = isReport(row) ? row.id : row.reportId
+
+  router.visit(`/reports/${reportId}`)
 }
 
 function handleEditReport(row: ActiveRow) {
   if (pageMode.value !== 'test-request') return
-  console.log('Editing payment status only:', row)
+  if (!isReport(row)) return
+
+  editingPaymentReport.value = row
+  paymentDraft.value = {
+    paymentStatus: row.paymentStatus || 'Pending',
+    deposit: row.deposit !== undefined && row.deposit !== null ? String(row.deposit) : '',
+    orNo: row.orNo || '',
+    paymentDate: row.paymentDate || '',
+    balance: row.balance !== undefined && row.balance !== null ? String(row.balance) : '',
+  }
+  showPaymentModal.value = true
+}
+
+function mapSamplesForSubmit(report: Report) {
+  return report.samples.map((sample) => ({
+    laboratory_code: sample.laboratoryCode,
+    sample_id: sample.sampleId,
+    sample_description: sample.sampleDescription,
+    sample_type: sample.sampleType,
+    topography: sample.topography,
+    coordinates: sample.coordinates,
+    longitude: sample.longitude,
+    latitude: sample.latitude,
+    region: sample.region,
+    province: sample.province,
+    municipality: sample.municipality,
+    barangay: sample.barangay,
+    farm_area: sample.farmArea,
+    crops: sample.crops,
+    remarks: sample.remarks,
+    analysis_requested: sample.analysisRequested,
+    analysis_requested_chemist: sample.analysisRequestedChemist,
+    analysis_requested_agriculturist: sample.analysisRequestedAgriculturist,
+    subtotal: sample.subtotal,
+  }))
+}
+
+function savePaymentChanges() {
+  if (!editingPaymentReport.value) return
+
+  const report = editingPaymentReport.value
+  const payload = {
+    request_code: report.requestCode || getReportId(report),
+    date: report.date,
+    status: report.status,
+    is_draft: false,
+    surname: report.surname,
+    first_name: report.firstName,
+    middle_name: report.middleName,
+    full_name: report.fullName,
+    rsbsa_no: report.rsbsaNo,
+    company_name: report.companyName,
+    classification: report.classification,
+    sex: report.sex,
+    age: report.age,
+    address: report.address,
+    contact_number: report.contactNumber,
+    email_address: report.emailAddress,
+    sampling_date: report.samplingDate,
+    sampling_time: report.samplingTime,
+    mode_of_release: report.modeOfRelease,
+    retrieve_sample: report.retrieveSample,
+    agreed_release_date: report.agreedReleaseDate,
+    number_of_samples: report.numberOfSamples,
+    date_received: report.dateReceived,
+    received_by: report.receivedBy,
+    payment_status: paymentDraft.value.paymentStatus,
+    deposit: Number(paymentDraft.value.deposit || 0),
+    or_no: paymentDraft.value.orNo,
+    payment_date: paymentDraft.value.paymentDate,
+    balance: Number(paymentDraft.value.balance || 0),
+    total_amount_due: report.totalAmountDue,
+    total_amount: report.totalAmount,
+    samples: mapSamplesForSubmit(report),
+  }
+
+  router.put(`/reports/${report.id}`, payload, {
+    preserveScroll: true,
+    onSuccess: () => {
+      showPaymentModal.value = false
+      editingPaymentReport.value = null
+      router.reload({ preserveScroll: true })
+    },
+  })
 }
 </script>
 
@@ -881,17 +918,17 @@ function handleEditReport(row: ActiveRow) {
   <div ref="pageRoot" class="relative p-3 sm:p-4 md:p-5">
     <div class="flex flex-col gap-5">
       <div
-        class="sticky top-0 z-30 -mx-3 space-y-5 border-b border-zinc-200 bg-gray-100 px-3 pb-4 pt-3 sm:-mx-4 sm:px-4 md:-mx-5 md:px-5 md:pt-5"
+        class="sticky top-0 z-30 -mx-3 space-y-5 border-b border-border bg-background px-3 pb-4 pt-3 sm:-mx-4 sm:px-4 md:-mx-5 md:px-5 md:pt-5"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 class="text-xl font-bold text-zinc-900 sm:text-2xl">
+          <h1 class="text-xl font-bold text-foreground sm:text-2xl">
             {{ pageMode === 'test-request' ? 'Test Request Records' : 'Sample Records' }}
           </h1>
 
           <button
             type="button"
             @click="showCreateModal = true"
-            class="inline-flex items-center justify-center gap-2 rounded-lg border border-[#0E3D1A] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E3D1A] transition hover:bg-[#0E3D1A] hover:text-white"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-primary bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground"
           >
             <Plus class="h-4 w-4" />
             Create Test Request
@@ -904,8 +941,8 @@ function handleEditReport(row: ActiveRow) {
             @click="setPageMode('test-request')"
             class="rounded-lg border px-4 py-2 text-sm font-semibold"
             :class="pageMode === 'test-request'
-              ? 'border-[#0E3D1A] text-emerald-600'
-              : 'border-zinc-200 text-zinc-600'"
+              ? 'border-primary text-primary'
+              : 'border-border text-muted-foreground'"
           >
             Test Request List
           </button>
@@ -915,8 +952,8 @@ function handleEditReport(row: ActiveRow) {
             @click="setPageMode('sample')"
             class="rounded-lg border px-4 py-2 text-sm font-semibold"
             :class="pageMode === 'sample'
-              ? 'border-[#0E3D1A] text-emerald-600'
-              : 'border-zinc-200 text-zinc-600'"
+              ? 'border-primary text-primary'
+              : 'border-border text-muted-foreground'"
           >
             Sample List
           </button>
@@ -1188,6 +1225,7 @@ function handleEditReport(row: ActiveRow) {
 
     <CreateTestRequestEntryModal
       :open="showCreateModal"
+      :clients="createRequestClients"
       @close="showCreateModal = false"
       @create-new="handleCreateNewClient"
       @add-record="handleAddRecord"
@@ -1204,6 +1242,105 @@ function handleEditReport(row: ActiveRow) {
       @reset-saved-view="resetSavedView"
       @save-view="saveColumnView"
     />
+
+    <div
+      v-if="showPaymentModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+      @click.self="showPaymentModal = false"
+    >
+      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="mb-5 flex items-center justify-between gap-4">
+          <h3 class="text-lg font-semibold text-zinc-900">
+            Edit Payment Status
+          </h3>
+
+          <button
+            type="button"
+            class="text-2xl leading-none text-zinc-400 transition hover:text-zinc-700"
+            @click="showPaymentModal = false"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-zinc-700">Status</label>
+            <select
+              v-model="paymentDraft.paymentStatus"
+              class="h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+            >
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Unpaid">Unpaid</option>
+            </select>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-zinc-700">Deposit</label>
+              <input
+                v-model="paymentDraft.deposit"
+                type="number"
+                min="0"
+                step="0.01"
+                class="h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-zinc-700">O.R. No.</label>
+              <input
+                v-model="paymentDraft.orNo"
+                type="text"
+                class="h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-zinc-700">Date</label>
+              <input
+                v-model="paymentDraft.paymentDate"
+                type="date"
+                class="h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-zinc-700">Balance</label>
+              <input
+                v-model="paymentDraft.balance"
+                type="number"
+                min="0"
+                step="0.01"
+                class="h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            class="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            @click="showPaymentModal = false"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="rounded-lg bg-[#0E3D1A] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            @click="savePaymentChanges"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

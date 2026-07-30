@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
-import type { BreadcrumbItem } from '@/types'
-import { computed, ref } from 'vue'
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,16 +12,66 @@ import {
   MapPin,
   User,
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AppSidebarLayout from '@/Layouts/app/AppSidebarLayout.vue'
+import type { BreadcrumbItem } from '@/types'
 
 import TestRequestCodeModal from './TestRequestCodeModal.vue'
 
-const REPORTS_STORAGE_KEY = 'test-requests'
+const props = defineProps<{
+  draftReport?: Record<string, any> | null
+  viewOnly?: boolean
+}>()
 
-const localDraft = JSON.parse(localStorage.getItem('test-request-draft') || '{}')
-const draft = localDraft
+const draft = computed(() => props.draftReport ?? {})
 
-const page1 = computed(() => draft?.page1 ?? {})
-const page2 = computed(() => draft?.page2 ?? {})
+function readDraft(...keys: string[]) {
+  for (const key of keys) {
+    const value = draft.value?.[key]
+    if (value !== undefined && value !== null && value !== '') {
+      return value
+    }
+  }
+
+  return ''
+}
+
+const page1 = computed(() => ({
+  surname: readDraft('surname', 'last_name', 'lastName'),
+  firstName: readDraft('first_name', 'firstName', 'givenname', 'given_name'),
+  middleName: readDraft('middle_name', 'middleName'),
+  rsbsaNo: readDraft('rsbsa_no', 'rsbsaNo'),
+  companyName: readDraft('company_name', 'companyName'),
+  address: readDraft('address'),
+  contactNumber: readDraft('contact_number', 'contactNumber') || '+63',
+  emailAddress: readDraft('email_address', 'emailAddress'),
+  sex: readDraft('sex'),
+  age: readDraft('age'),
+  classification: typeof draft.value.classification === 'string'
+    ? draft.value.classification.split(',').map((item: string) => item.trim()).filter(Boolean)
+    : (draft.value.classification ?? []),
+  studentType: readDraft('student_type', 'studentType'),
+  samplingDate: readDraft('sampling_date', 'samplingDate'),
+  samplingTime: readDraft('sampling_time', 'samplingTime'),
+}))
+
+const page2 = computed(() => ({
+  number_of_samples: readDraft('number_of_samples', 'numberOfSamples') || '1',
+  sampleInfo: {
+    number_of_samples: readDraft('number_of_samples', 'numberOfSamples') || '1',
+    date_received: readDraft('date_received', 'dateReceived'),
+    received_by: readDraft('received_by', 'receivedBy'),
+    mode_of_release: readDraft('mode_of_release', 'modeOfRelease'),
+    retrieve_sample: readDraft('retrieve_sample', 'retrieveSample') ? 'yes' : 'no',
+    agreed_release_date: readDraft('agreed_release_date', 'agreedReleaseDate'),
+    deposit: readDraft('deposit'),
+    or_no: readDraft('or_no', 'orNo'),
+    payment_date: readDraft('payment_date', 'paymentDate'),
+    balance: readDraft('balance'),
+  },
+  paymentStatus: readDraft('payment_status', 'paymentStatus') || 'pending',
+  requestBlocks: draft.value.samples ?? draft.value.requestBlocks ?? [],
+}))
 
 const sampleInfo = computed(() => page2.value.sampleInfo ?? page2.value ?? {})
 const paymentStatus = computed(() => page2.value.paymentStatus ?? 'pending')
@@ -36,15 +83,66 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Summary', href: '/test-reports/create/page-3' },
 ]
 
-const chemistPrimary = ['pH', 'EC Analysis', 'Organic Matter Analysis', 'Available Phosphorus']
-const exchangeableBases = ['Potassium', 'Calcium', 'Magnesium', 'Sodium']
-const micronutrients = ['Zinc', 'Copper', 'Iron', 'Manganese']
-const agriculturistOptions = [
-  'Soil Moisture',
-  'Particle Size Analysis',
-  'Soil Texture',
-  'Fertilizer Recommendation',
+const chemistPrimaryGroups = [
+  { label: 'pH and EC Analysis', tasks: ['pH', 'EC Analysis'] },
+  { label: 'Organic Matter Analysis', tasks: ['Organic Matter Analysis'] },
+  { label: 'Available Phosphorus', tasks: ['Available Phosphorus'] },
+  { label: 'Exchangeable Bases', tasks: ['Potassium', 'Calcium', 'Magnesium', 'Sodium'] },
+  { label: 'Micronutrients', tasks: ['Zinc', 'Copper', 'Iron', 'Manganese'] },
 ]
+const agriculturistGroups = [
+  { label: 'Soil Moisture', tasks: ['Soil Moisture'] },
+  { label: 'Particle Size Analysis and Soil Texture', tasks: ['Particle Size Analysis', 'Soil Texture'] },
+  { label: 'Fertilizer Recommendation', tasks: ['Fertilizer Recommendation'] },
+]
+const chemistPrimary = chemistPrimaryGroups.flatMap((group) => group.tasks)
+const exchangeableBases = chemistPrimaryGroups.find((group) => group.label === 'Exchangeable Bases')?.tasks ?? []
+const micronutrients = chemistPrimaryGroups.find((group) => group.label === 'Micronutrients')?.tasks ?? []
+const agriculturistOptions = agriculturistGroups.flatMap((group) => group.tasks)
+
+function normalizeSample(sample: Record<string, any>, index: number) {
+  const analysisRequested = Array.isArray(sample.analysisRequested)
+    ? sample.analysisRequested
+    : String(sample.analysis_requested ?? sample.analysis_requested_chemist ?? sample.analysis_requested_agriculturist ?? '')
+      .split(',')
+      .map((item: string) => item.trim())
+      .filter(Boolean)
+
+  return {
+    id: String(sample.id ?? index + 1),
+    sampleDescription: sample.sampleDescription ?? sample.sample_description ?? '',
+    sampleType: sample.sampleType ?? sample.sample_type ?? '',
+    sampleId: sample.sampleId ?? sample.sample_id ?? '',
+    soilDescription: sample.soilDescription ?? sample.soil_description ?? {
+      condition: sample.soil_condition ?? sample.condition ?? '',
+      color: sample.soil_color ?? sample.color ?? '',
+      depth: sample.soil_depth ?? sample.depth ?? '',
+      others: sample.soil_others ?? sample.others ?? '',
+    },
+    waterDescription: sample.waterDescription ?? sample.water_description ?? (
+      sample.sample_description === 'water'
+        ? {
+            filtered: sample.water_filtered ?? '',
+            temperature: sample.water_temperature ?? '',
+            others: sample.water_others ?? '',
+          }
+        : undefined
+    ),
+    topography: sample.topography ?? '',
+    longitude: sample.longitude ?? '',
+    latitude: sample.latitude ?? '',
+    region: sample.region ?? '',
+    province: sample.province ?? '',
+    municipality: sample.municipality ?? '',
+    barangay: sample.barangay ?? '',
+    farmArea: sample.farmArea ?? sample.farm_area ?? '',
+    crops: sample.crops ?? '',
+    remarks: sample.remarks ?? '',
+    analysisRequested,
+    subtotal: Number(sample.subtotal ?? 0),
+    labCode: sample.labCode ?? sample.laboratory_code ?? '',
+  }
+}
 
 function createEmptyViewSample(index: number) {
   return {
@@ -77,17 +175,12 @@ function createEmptyViewSample(index: number) {
 const requestBlocks = computed<any[]>(() => {
   const blocks =
     page2.value.requestBlocks ??
-    page2.value.samples ??
-    page2.value.testRequests ??
-    page2.value.forms ??
-    page2.value.sampleForms ??
-    page2.value.test_request_forms ??
-    page2.value.testRequestForms ??
-    draft?.requestBlocks ??
-    draft?.samples ??
+    draft.value.samples ??
     []
 
-  if (Array.isArray(blocks) && blocks.length > 0) return blocks
+  if (Array.isArray(blocks) && blocks.length > 0) {
+    return blocks.map((block, index) => normalizeSample(block, index))
+  }
 
   const count = Number(sampleInfo.value.number_of_samples || 1)
 
@@ -104,7 +197,15 @@ const totalAmount = computed(() =>
 function valueOf(value: unknown) {
   if (Array.isArray(value)) return value.length ? value.join(', ') : '—'
   if (value === null || value === undefined || value === '') return '—'
-  return String(value)
+
+  const text = String(value)
+  const isoDateMatch = text.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s].*)?$/)
+
+  if (isoDateMatch) {
+    return isoDateMatch[1]
+  }
+
+  return text
 }
 
 function isSelected(block: any, label: string) {
@@ -116,50 +217,7 @@ function peso(value: unknown) {
 }
 
 function goBack() {
-  router.visit('/test-reports/create/page-2')
-}
-
-function getExistingAvailableTasks() {
-  try {
-    const oldKey = JSON.parse(localStorage.getItem('available-tasks') || '[]')
-    const newKey = JSON.parse(localStorage.getItem('todo-available-tasks') || '[]')
-
-    return [
-      ...(Array.isArray(oldKey) ? oldKey : []),
-      ...(Array.isArray(newKey) ? newKey : []),
-    ]
-  } catch {
-    return []
-  }
-}
-
-function getSavedReports() {
-  try {
-    const raw = localStorage.getItem(REPORTS_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function generateTestRequestCode() {
-  const year = new Date().getFullYear()
-  const existingTasks = getExistingAvailableTasks()
-  const existingReports = getSavedReports()
-
-  const taskCodes = existingTasks.map((task: any) => String(task.testRequestCode || ''))
-  const reportCodes = existingReports.map((report: any) => String(report.testRequestCode || report.requestId || ''))
-
-  const usedNumbers = [...taskCodes, ...reportCodes]
-    .filter((code) => code.startsWith(`RSL-${year}-`))
-    .map((code) => Number(code.split('-').pop()))
-    .filter((number) => !Number.isNaN(number))
-
-  const nextNumber = usedNumbers.length ? Math.max(...usedNumbers) + 1 : 1
-
-  return `RSL-${year}-${String(nextNumber).padStart(4, '0')}`
+  router.visit(`/test-reports/create/page-2${props.draftReport?.id ? `?draft_id=${props.draftReport.id}` : ''}`)
 }
 
 function getSamplePrefix(sampleDescription: unknown) {
@@ -178,18 +236,19 @@ function generateLabCode(block: any, index: number) {
   const year = String(new Date().getFullYear()).slice(-2)
   const prefix = getSamplePrefix(block.sampleDescription)
 
-  const sameSampleBlocks = requestBlocks.value.filter(
-    (item) => getSamplePrefix(item.sampleDescription) === prefix,
-  )
+  const sameSampleBlocks = requestBlocks.value.filter((item) => {
+    return getSamplePrefix(item.sampleDescription) === prefix
+  })
 
   const sampleIndex =
     sameSampleBlocks.findIndex((item) => item.id === block.id) + 1 || index + 1
 
-  return `${prefix}${year}-${String(sampleIndex).padStart(4, '0')}`
+  return `${prefix}${year}-${String(sampleIndex).padStart(3, '0')}`
 }
 
 const showCodeModal = ref(false)
 const generatedTestRequestCode = ref('')
+const validationError = ref('')
 
 const generatedLabCodes = computed(() =>
   requestBlocks.value.map((block, index) => ({
@@ -198,61 +257,136 @@ const generatedLabCodes = computed(() =>
   })),
 )
 
-function submit() {
-  generatedTestRequestCode.value = generateTestRequestCode()
+async function fetchNextRequestCode() {
+  const response = await fetch('/reports/next-request-code', {
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to generate request code.')
+  }
+
+  const data = await response.json() as { request_code?: string }
+
+  return data.request_code || ''
+}
+
+async function submit() {
+  const requiredPage1Field = [
+    [!page1.value.surname, 'Surname'],
+    [!page1.value.firstName, 'First Name'],
+    [!page1.value.address, 'Address'],
+    [!page1.value.contactNumber || page1.value.contactNumber === '+63', 'Contact No.'],
+    [!page1.value.classification?.length, 'Client Classification'],
+    [!page1.value.sex, 'Sex'],
+    [!page1.value.age, 'Age'],
+  ].find(([missing]) => missing)?.[1]
+
+  if (requiredPage1Field) {
+    validationError.value = `${requiredPage1Field} is required.`
+    return
+  }
+
+  if (page1.value.classification?.includes?.('Student') && !page1.value.studentType) {
+    validationError.value = 'Specify if Student is required.'
+    return
+  }
+
+  const requiredPage2Field = [
+    [!sampleInfo.value.mode_of_release, 'Mode of Release'],
+    [!sampleInfo.value.retrieve_sample, 'Retrieve retained sample after analysis'],
+    [!sampleInfo.value.agreed_release_date, 'Agreed Date of Release Results'],
+    [!sampleInfo.value.number_of_samples, 'No. of Samples Submitted'],
+    [!sampleInfo.value.received_by, 'Received By'],
+  ].find(([missing]) => missing)?.[1]
+
+  if (requiredPage2Field) {
+    validationError.value = `${requiredPage2Field} is required.`
+    return
+  }
+
+  const requiredBlockError = requestBlocks.value.flatMap((block, index) => ([
+    [!block.sampleDescription, `Sample ${index + 1}: Sample Description`],
+    [!block.sampleType, `Sample ${index + 1}: Sample Type`],
+    [!block.sampleId, `Sample ${index + 1}: Sample ID`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.condition, `Sample ${index + 1}: Condition`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.color, `Sample ${index + 1}: Color`],
+    [block.sampleDescription === 'soil' && !block.soilDescription?.depth, `Sample ${index + 1}: Soil Depth`],
+    [block.sampleDescription === 'water' && !block.waterDescription?.filtered, `Sample ${index + 1}: Filtered`],
+    [block.sampleDescription === 'water' && !block.waterDescription?.temperature, `Sample ${index + 1}: Temperature`],
+    [!block.topography, `Sample ${index + 1}: Topography`],
+    [!block.longitude, `Sample ${index + 1}: Longitude`],
+    [!block.latitude, `Sample ${index + 1}: Latitude`],
+    [!block.region, `Sample ${index + 1}: Region`],
+    [!block.province, `Sample ${index + 1}: Province`],
+    [!block.municipality, `Sample ${index + 1}: Municipality`],
+    [!block.barangay, `Sample ${index + 1}: Barangay`],
+    [!block.farmArea, `Sample ${index + 1}: Farm Area`],
+    [!block.crops, `Sample ${index + 1}: Crops`],
+  ].find(([missing]) => missing)?.[1])).find(Boolean)
+
+  if (requiredBlockError) {
+    validationError.value = `${requiredBlockError} is required.`
+    return
+  }
+
+  validationError.value = ''
+  generatedTestRequestCode.value = draft.value.request_code || await fetchNextRequestCode()
   showCodeModal.value = true
 }
 
 function saveReportRecord() {
-  const reports = getSavedReports()
-
-  const reportNumber = Number(generatedTestRequestCode.value.split('-').pop()) || reports.length + 1
-
-  const reportRecord = {
-    id: reportNumber,
-    testRequestCode: generatedTestRequestCode.value,
+  return {
+    request_code: generatedTestRequestCode.value || draft.value.request_code,
     date: new Date().toISOString().slice(0, 10),
     status: 'Test Request submitted',
-
+    is_draft: false,
     surname: page1.value.surname,
-    firstName: page1.value.firstName,
-    middleName: page1.value.middleName,
-    fullName: [
+    first_name: page1.value.firstName,
+    middle_name: page1.value.middleName,
+    full_name: [
       page1.value.firstName,
       page1.value.middleName,
       page1.value.surname,
     ].filter(Boolean).join(' '),
-
-    rsbsaNo: page1.value.rsbsaNo,
-    companyName: page1.value.companyName,
+    rsbsa_no: page1.value.rsbsaNo,
+    company_name: page1.value.companyName,
     classification: page1.value.classification,
+    student_type: page1.value.studentType,
     sex: page1.value.sex,
     age: page1.value.age,
     address: page1.value.address,
-    contactNumber: page1.value.contactNumber,
-    emailAddress: page1.value.emailAddress,
-    samplingDate: page1.value.samplingDate,
-    samplingTime: page1.value.samplingTime,
-
-    modeOfRelease: sampleInfo.value.mode_of_release,
-    retrieveSample: sampleInfo.value.retrieve_sample,
-    agreedReleaseDate: sampleInfo.value.agreed_release_date,
-    numberOfSamples: sampleInfo.value.number_of_samples,
-    dateReceived: sampleInfo.value.date_received,
-    receivedBy: sampleInfo.value.received_by,
-
-    paymentStatus: paymentStatus.value,
+    contact_number: page1.value.contactNumber,
+    email_address: page1.value.emailAddress,
+    sampling_date: page1.value.samplingDate,
+    sampling_time: page1.value.samplingTime,
+    mode_of_release: sampleInfo.value.mode_of_release,
+    retrieve_sample: sampleInfo.value.retrieve_sample,
+    agreed_release_date: sampleInfo.value.agreed_release_date,
+    number_of_samples: sampleInfo.value.number_of_samples,
+    date_received: sampleInfo.value.date_received,
+    received_by: sampleInfo.value.received_by,
+    payment_status: paymentStatus.value,
     deposit: Number(sampleInfo.value.deposit || 0),
-    orNo: sampleInfo.value.or_no,
-    paymentDate: sampleInfo.value.payment_date,
+    or_no: sampleInfo.value.or_no,
+    payment_date: sampleInfo.value.payment_date,
     balance: Number(sampleInfo.value.balance || 0),
-    totalAmountDue: totalAmount.value,
-
+    total_amount_due: totalAmount.value,
     samples: requestBlocks.value.map((block, index) => ({
-      laboratoryCode: generatedLabCodes.value[index]?.labCode,
-      sampleId: block.sampleId,
-      sampleDescription: block.sampleDescription,
-      sampleType: block.sampleType,
+      laboratory_code: generatedLabCodes.value[index]?.labCode,
+      sample_id: block.sampleId,
+      sample_description: block.sampleDescription,
+      sample_type: block.sampleType,
+      soil_condition: block.soilDescription?.condition || null,
+      soil_color: block.soilDescription?.color || null,
+      soil_depth: block.soilDescription?.depth || null,
+      soil_others: block.soilDescription?.others || null,
+      water_filtered: block.waterDescription?.filtered || null,
+      water_temperature: block.waterDescription?.temperature || null,
+      water_others: block.waterDescription?.others || null,
       topography: block.topography,
       longitude: block.longitude,
       latitude: block.latitude,
@@ -260,54 +394,29 @@ function saveReportRecord() {
       province: block.province,
       municipality: block.municipality,
       barangay: block.barangay,
-      farmArea: block.farmArea,
+      farm_area: block.farmArea,
       crops: block.crops,
       remarks: block.remarks,
-      analysisRequested: Array.isArray(block.analysisRequested)
+      analysis_requested: Array.isArray(block.analysisRequested)
         ? block.analysisRequested.join(', ')
         : block.analysisRequested,
       subtotal: Number(block.subtotal || 0),
     })),
   }
-
-  localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify([...reports, reportRecord]))
 }
 
 function confirmSubmit() {
-  const existing = getExistingAvailableTasks()
+  const payload = saveReportRecord()
 
-  const alreadyExists = existing.some(
-    (task: any) => task.testRequestCode === generatedTestRequestCode.value,
-  )
+  const method = props.draftReport?.id ? 'put' : 'post'
+  const url = props.draftReport?.id ? `/reports/${props.draftReport.id}` : '/reports'
 
-  if (alreadyExists) {
-    generatedTestRequestCode.value = generateTestRequestCode()
-    return
-  }
-
-  const newTasks = requestBlocks.value.flatMap((block, sampleIndex) =>
-    (block.analysisRequested ?? [])
-      .filter((taskType: string) => !agriculturistOptions.includes(taskType))
-      .map((taskType: string) => ({
-        id: crypto.randomUUID(),
-        taskType,
-        status: 'available',
-        dueDate: sampleInfo.value.agreed_release_date,
-        role: 'chemist',
-        sampleDescription: valueOf(block.sampleDescription),
-        labCode: generatedLabCodes.value[sampleIndex]?.labCode,
-        testRequestCode: generatedTestRequestCode.value,
-        sampleLabel: `Sample ${sampleIndex + 1}`,
-      })),
-  )
-
-  saveReportRecord()
-
-  localStorage.setItem('todo-available-tasks', JSON.stringify([...existing, ...newTasks]))
-  localStorage.removeItem('available-tasks')
-  localStorage.removeItem('test-request-draft')
-
-  router.visit('/todo/available-tasks')
+  router[method](url, payload, {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.visit('/reports')
+    },
+  })
 }
 </script>
 
@@ -789,7 +898,14 @@ function confirmSubmit() {
           </div>
         </div>
 
-        <div class="mt-8 flex items-center justify-between border-t border-zinc-200 pt-6">
+        <div
+          v-if="!viewOnly"
+          class="mt-8 flex items-center justify-between border-t border-zinc-200 pt-6"
+        >
+          <p v-if="validationError" class="text-sm font-medium text-rose-600">
+            {{ validationError }}
+          </p>
+
           <button
             type="button"
             @click="goBack"
@@ -815,6 +931,7 @@ function confirmSubmit() {
       </div>
     </div>
       <TestRequestCodeModal
+        v-if="!viewOnly"
         :show="showCodeModal"
         :test-request-code="generatedTestRequestCode"
         :lab-codes="generatedLabCodes"

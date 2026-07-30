@@ -2,17 +2,17 @@
 import { Form } from '@inertiajs/vue3';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-vue-next';
 import { nextTick, onMounted, ref, useTemplateRef } from 'vue';
-import AlertError from '@/components/AlertError.vue';
-import { Button } from '@/components/ui/button';
+import AlertError from '@/Components/AlertError.vue';
+import { Button } from '@/Components/ui/button';
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
-} from '@/components/ui/card';
+} from '@/Components/ui/card';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
-import { regenerateRecoveryCodes } from '@/routes/two-factor';
+import { regenerateRecoveryCodes } from '@/routes/two-factor/index';
 
 const { recoveryCodesList, fetchRecoveryCodes, errors } = useTwoFactorAuth();
 const isRecoveryCodesVisible = ref<boolean>(false);
@@ -64,8 +64,7 @@ onMounted(async () => {
 
                 <Form
                     v-if="isRecoveryCodesVisible && recoveryCodesList.length"
-                    v-bind="regenerateRecoveryCodes.form()"
-                    method="post"
+                    :action="regenerateRecoveryCodes()"
                     :options="{ preserveScroll: true }"
                     @success="fetchRecoveryCodes"
                     #default="{ processing }"

@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import AuthBase from '@/layouts/AuthLayout.vue';
+import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
+import InputError from '@/Components/InputError.vue';
+import TextLink from '@/Components/TextLink.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Spinner } from '@/Components/ui/spinner';
+import AuthBase from '@/Layouts/AuthLayout.vue';
 import { login } from '@/routes';
-import { store } from '@/routes/register';
+const { store } = RegisteredUserController;
 </script>
 
 <template>
@@ -19,7 +20,7 @@ import { store } from '@/routes/register';
         <Head title="Register" />
 
         <Form
-            v-bind="store.form()"
+            :action="store()"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"

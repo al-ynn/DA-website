@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+import TextLink from '@/Components/TextLink.vue';
+import { Button } from '@/Components/ui/button';
+import { Spinner } from '@/Components/ui/spinner';
+import AuthLayout from '@/Layouts/AuthLayout.vue';
 import { logout } from '@/routes';
-import { send } from '@/routes/verification';
+import { send } from '@/routes/verification/index';
 
 defineProps<{
     status?: string;
@@ -28,7 +28,7 @@ defineProps<{
         </div>
 
         <Form
-            v-bind="send.form()"
+            :action="send()"
             class="space-y-6 text-center"
             v-slot="{ processing }"
         >

@@ -7,14 +7,17 @@ use App\Models\LaboratoryTask;
 use App\Models\TaskCategory;
 use App\Models\TaskPreset;
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Models\DefaultTaskPreset;
 
 class TaskManagementController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(): Response
     {
+        $this->authorize('viewAny', TaskPreset::class);
         $this->ensureTaskManagementSeedData();
 
         $taskCategories = TaskCategory::query()
@@ -65,22 +68,6 @@ class TaskManagementController extends Controller
             ->flatten(1)
             ->values();
 
-        $defaultPresets = DefaultTaskPreset::query()
-            ->orderBy('category')
-            ->orderBy('name')
-            ->get()
-            ->map(function (DefaultTaskPreset $preset) {
-                return [
-                    'id' => $preset->id,
-                    'name' => $preset->name,
-                    'description' => $preset->description,
-                    'category' => strtolower($preset->category),
-                    'tasks' => $preset->tasks ?? [],
-                    'is_default' => true,
-                ];
-            })
-            ->values();
-
         $users = User::query()
             ->where('is_disabled', false)
             ->where('is_draft', false)
@@ -95,8 +82,6 @@ class TaskManagementController extends Controller
             ->orderBy('first_name')
             ->get()
             ->map(function (User $user) {
-                $roleKey = strtolower($user->role);
-
                 return [
                     'id' => $user->id,
 
@@ -112,23 +97,21 @@ class TaskManagementController extends Controller
                     'tasks' => $user->additional_tasks ?? [],
                     'additionalCategories' => $user->additional_tasks ?? [],
 
-                    'assigned_presets' => $roleKey === 'admin'
-                        ? collect([])
-                        : $user->taskPresets
-                            ->concat($user->legacyTaskPresets)
-                            ->unique('id')
-                            ->values()
-                            ->map(function ($preset) {
-                                return [
-                                    'id' => $preset->id,
-                                    'name' => $preset->name,
-                                    'description' => $preset->description,
-                                    'category' => $preset->category?->name ? strtolower($preset->category->name) : null,
-                                    'task_category_id' => $preset->task_category_id,
-                                    'tasks' => $preset->laboratoryTasks->pluck('name')->values(),
-                                    'task_ids' => $preset->laboratoryTasks->pluck('id')->values(),
-                                ];
-                            })->values(),
+                    'assigned_presets' => $user->taskPresets
+                        ->concat($user->legacyTaskPresets)
+                        ->unique('id')
+                        ->values()
+                        ->map(function ($preset) {
+                            return [
+                                'id' => $preset->id,
+                                'name' => $preset->name,
+                                'description' => $preset->description,
+                                'category' => $preset->category?->name ? strtolower($preset->category->name) : null,
+                                'task_category_id' => $preset->task_category_id,
+                                'tasks' => $preset->laboratoryTasks->pluck('name')->values(),
+                                'task_ids' => $preset->laboratoryTasks->pluck('id')->values(),
+                            ];
+                        })->values(),
 
                     'assigned_tasks' => $user->assignedTasks->map(function (LaboratoryTask $task) {
                         return [
@@ -145,7 +128,6 @@ class TaskManagementController extends Controller
             'users' => $users,
             'taskCategories' => $taskCategories,
             'presets' => $allPresets,
-            'defaultPresets' => $defaultPresets,
         ]);
     }
 
@@ -192,4 +174,5 @@ class TaskManagementController extends Controller
             }
         }
     }
+
 }
